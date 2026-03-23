@@ -1,0 +1,126 @@
+﻿from datetime import datetime
+
+from fastapi import HTTPException, status
+
+from ..core.security import AuthContext
+from ..models.history import HistoryRecord
+from ..repositories.history_repository import HistoryRepository
+from ..schemas.history import HistoryRequest, HistoryResponse, HistorySearchResponse
+from ..search.base import SearchGateway, SearchQuery
+
+
+class HistoryService:
+    def __init__(self, repository: HistoryRepository, search_gateway: SearchGateway) -> None:
+        self.repository = repository
+        self.search_gateway = search_gateway
+
+    def list_by_patient(self, patient_id: int, principal: AuthContext) -> list[HistoryResponse]:
+        self._ensure_history_access(patient_id, principal)
+        items = self.repository.list_by_patient(patient_id)
+        return [self._to_response(item) for item in items]
+
+    def get_history(self, history_id: int, principal: AuthContext) -> HistoryResponse:
+        history = self._require_history(history_id)
+        self._ensure_history_access(history.patient_id, principal)
+        return self._to_response(history)
+
+    def create_history(self, payload: HistoryRequest, principal: AuthContext) -> HistoryResponse:
+        self._ensure_editor(principal)
+        history = self.repository.create_history(
+            date=payload.date.replace(tzinfo=None),
+            patient_id=payload.patient_id,
+            hospital_id=payload.hospital_id,
+            doctor_id=payload.doctor_id,
+            room=payload.room,
+            data=payload.data,
+        )
+        self.search_gateway.index_history(history)
+        return self._to_response(history)
+
+    def update_history(
+        self, history_id: int, payload: HistoryRequest, principal: AuthContext
+    ) -> HistoryResponse:
+        self._ensure_editor(principal)
+        history = self._require_history(history_id)
+        updated = self.repository.update_history(
+            history,
+            date=payload.date.replace(tzinfo=None),
+            patient_id=payload.patient_id,
+            hospital_id=payload.hospital_id,
+            doctor_id=payload.doctor_id,
+            room=payload.room,
+            data=payload.data,
+        )
+        self.search_gateway.index_history(updated)
+        return self._to_response(updated)
+
+    def search(
+        self,
+        *,
+        principal: AuthContext,
+        query: str | None,
+        patient_id: int | None,
+        doctor_id: int | None,
+        hospital_id: int | None,
+        room: str | None,
+        date_from: datetime | None,
+        date_to: datetime | None,
+        page: int,
+        size: int,
+    ) -> HistorySearchResponse:
+        effective_patient_id = patient_id
+        if "User" in principal.roles:
+            effective_patient_id = principal.subject
+        search_query = SearchQuery(
+            query=query,
+            patient_id=effective_patient_id,
+            doctor_id=doctor_id,
+            hospital_id=hospital_id,
+            room=room,
+            date_from=date_from.replace(tzinfo=None) if date_from else None,
+            date_to=date_to.replace(tzinfo=None) if date_to else None,
+            page=page,
+            size=size,
+        )
+        total, ids = self.search_gateway.search(search_query)
+        items: list[HistoryResponse] = []
+        for history_id in ids:
+            history = self.repository.get_history(history_id)
+            if history is not None:
+                if "User" in principal.roles and history.patient_id != principal.subject:
+                    continue
+                items.append(self._to_response(history))
+        return HistorySearchResponse(total=total, items=items)
+
+    def _require_history(self, history_id: int) -> HistoryRecord:
+        history = self.repository.get_history(history_id)
+        if history is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="History record not found"
+            )
+        return history
+
+    def _ensure_history_access(self, patient_id: int, principal: AuthContext) -> None:
+        elevated = {"Admin", "Manager", "Doctor"}
+        if set(principal.roles).isdisjoint(elevated) and patient_id != principal.subject:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+            )
+
+    def _ensure_editor(self, principal: AuthContext) -> None:
+        elevated = {"Admin", "Manager", "Doctor"}
+        if set(principal.roles).isdisjoint(elevated):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+            )
+
+    def _to_response(self, history: HistoryRecord) -> HistoryResponse:
+        return HistoryResponse(
+            id=history.id,
+            date=history.date,
+            patient_id=history.patient_id,
+            hospital_id=history.hospital_id,
+            doctor_id=history.doctor_id,
+            room=history.room,
+            data=history.data,
+        )

@@ -17,7 +17,7 @@ Current implementation progress:
 - `account-service`: implemented with JWT auth, seeded users, account CRUD, and doctor directory.
 - `hospital-service`: implemented with hospital CRUD and room management.
 - `timetable-service`: implemented with schedule CRUD, slot generation, and appointment booking.
-- `document-service`: scaffold only.
+- `document-service`: implemented with medical history CRUD, patient access rules, and Elasticsearch-backed search.
 
 ## Services
 
@@ -50,10 +50,10 @@ Current implementation progress:
 ```text
 .
 +- services/
-�  +- account_service/
-�  +- hospital_service/
-�  +- timetable_service/
-�  L- document_service/
+|  +- account_service/
+|  +- hospital_service/
+|  +- timetable_service/
+|  L- document_service/
 +- libs/service_common/
 +- deploy/
 +- plans/

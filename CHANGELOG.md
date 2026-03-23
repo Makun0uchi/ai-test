@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-24
+
+### Added
+- Implemented the functional `document-service` with medical history create, update, read, and patient listing flows.
+- Added PostgreSQL-backed SQLAlchemy models and layered router-service-repository-model structure for history records.
+- Added Elasticsearch indexing and filtered full-text search for medical history documents with an in-memory search fallback for tests.
+- Added JWT-based authorization rules for patient self-access and elevated staff editing scenarios.
+- Added API tests for document creation, updates, per-patient access control, and search restrictions.
+
 ## [0.4.0] - 2026-03-24
 
 ### Added
