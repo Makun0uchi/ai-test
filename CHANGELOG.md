@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-24
+
+### Added
+- Implemented the functional `hospital-service` with hospital CRUD and room management endpoints.
+- Added PostgreSQL-backed SQLAlchemy models for hospitals and hospital rooms.
+- Added JWT-based role checks for hospital management actions.
+- Added API tests for hospital creation, reading, updating, deletion, and room validation scenarios.
+
 ## [0.2.0] - 2026-03-24
 
 ### Added

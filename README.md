@@ -15,7 +15,7 @@ The repository currently contains the bootstrap for the target microservice plat
 
 Current implementation progress:
 - `account-service`: implemented with JWT auth, seeded users, account CRUD, and doctor directory.
-- `hospital-service`: scaffold only.
+- `hospital-service`: implemented with hospital CRUD and room management.
 - `timetable-service`: scaffold only.
 - `document-service`: scaffold only.
 
