@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-24
+
+### Added
+- Implemented the first functional microservice: `account-service`.
+- Added JWT authentication, refresh token rotation, authorization dependencies, and seeded demo users.
+- Added account administration endpoints and doctor directory endpoints.
+- Added persistent SQLAlchemy models for accounts, roles, and refresh tokens.
+- Added integration-style API tests for sign-up, sign-in, me, account CRUD, doctor filtering, validation, refresh, and sign-out flows.
+
 ## [0.1.0] - 2026-03-24
 
 ### Added

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from ..core.config import Settings, get_settings
+from ..core.config import Settings
+from ..core.dependencies import get_settings
 from ..schemas.system import HealthResponse
 from ..services.system_service import SystemService
 

@@ -13,6 +13,12 @@ The repository currently contains the bootstrap for the target microservice plat
 - smoke tests for each service;
 - planning documents for the next implementation phases.
 
+Current implementation progress:
+- `account-service`: implemented with JWT auth, seeded users, account CRUD, and doctor directory.
+- `hospital-service`: scaffold only.
+- `timetable-service`: scaffold only.
+- `document-service`: scaffold only.
+
 ## Services
 
 1. Account URL: http://localhost:8081/ui-swagger
@@ -44,10 +50,10 @@ The repository currently contains the bootstrap for the target microservice plat
 ```text
 .
 +- services/
-¦  +- account_service/
-¦  +- hospital_service/
-¦  +- timetable_service/
-¦  L- document_service/
+ï¿½  +- account_service/
+ï¿½  +- hospital_service/
+ï¿½  +- timetable_service/
+ï¿½  L- document_service/
 +- libs/service_common/
 +- deploy/
 +- plans/
@@ -71,6 +77,13 @@ L- .github/workflows/
 - Changelog format: `Keep a Changelog`
 - Versioning strategy: `Semantic Versioning`
 - Git tags format: `vMAJOR.MINOR.PATCH`
+
+## Seeded users
+
+- `admin / admin` -> `Admin`
+- `manager / manager` -> `Manager`
+- `doctor / doctor` -> `Doctor`
+- `user / user` -> `User`
 
 ## Planning documents
 

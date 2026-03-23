@@ -1,6 +1,5 @@
-from functools import lru_cache
-
 from libs.service_common.versioning import read_version
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,8 +14,11 @@ class Settings(BaseSettings):
     openapi_url: str = "/openapi.json"
     api_prefix: str = "/api"
     service_version: str = read_version()
-
-
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
+    database_url: str = Field(
+        default="postgresql+psycopg://postgres:postgres@localhost:5432/account_db",
+        alias="DATABASE_URL",
+    )
+    jwt_secret_key: str = Field(default="local-account-service-secret", alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 14
