@@ -1,1 +1,4 @@
-"""Persistence and domain models."""
+﻿from .base import Base
+from .timetable import Appointment, Timetable
+
+__all__ = ["Appointment", "Base", "Timetable"]

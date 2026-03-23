@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-24
+
+### Added
+- Implemented the functional `timetable-service` with timetable CRUD, slot listing, and appointment booking flows.
+- Added timetable interval validation for 30-minute alignment, ordering, 12-hour limit, and overlap protection.
+- Added persistent SQLAlchemy models for timetables and appointments.
+- Added JWT-based authorization for timetable management and patient booking scenarios.
+- Added API tests for timetable creation, updates, overlaps, slot booking, duplicate booking rejection, and cleanup by doctor and hospital.
+
 ## [0.3.0] - 2026-03-24
 
 ### Added
