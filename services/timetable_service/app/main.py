@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 from libs.service_common.logging import configure_logging
+from libs.service_common.reference_validation import HttpReferenceValidator, ReferenceValidator
 
 from .core.config import Settings
 from .core.database import DatabaseManager
@@ -11,7 +12,18 @@ from .routers.system import router as system_router
 from .routers.timetable import router as timetable_router
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_reference_validator(settings: Settings) -> ReferenceValidator:
+    return HttpReferenceValidator(
+        account_service_url=settings.account_service_url,
+        hospital_service_url=settings.hospital_service_url,
+        internal_api_key=settings.internal_api_key,
+    )
+
+
+def create_app(
+    settings: Settings | None = None,
+    reference_validator: ReferenceValidator | None = None,
+) -> FastAPI:
     app_settings = settings or Settings()
     configure_logging(app_settings.service_name)
 
@@ -19,11 +31,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         database_manager = DatabaseManager(app_settings.database_url)
         database_manager.create_tables()
+        app_reference_validator = reference_validator or create_reference_validator(app_settings)
 
         app.state.settings = app_settings
         app.state.database_manager = database_manager
+        app.state.reference_validator = app_reference_validator
 
         yield
+        app_reference_validator.close()
         database_manager.dispose()
 
     app = FastAPI(

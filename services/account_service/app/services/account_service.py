@@ -9,6 +9,7 @@ from ..schemas.account import (
     AdminUpdateAccountRequest,
     UpdateCurrentAccountRequest,
 )
+from ..schemas.internal import InternalAccountResponse
 
 
 class AccountService:
@@ -33,6 +34,14 @@ class AccountService:
             self._to_response(account) for account in self.repository.list_accounts(offset, limit)
         ]
 
+    def get_internal_account(self, account_id: int) -> InternalAccountResponse:
+        account = self._require_account(account_id)
+        return InternalAccountResponse(
+            id=account.id,
+            username=account.username,
+            roles=sorted(role.name for role in account.roles),
+        )
+
     def create_account(self, payload: AdminCreateAccountRequest) -> AccountResponse:
         if self.repository.get_account_by_username(payload.username) is not None:
             raise HTTPException(
@@ -52,9 +61,7 @@ class AccountService:
     def update_account(
         self, account_id: int, payload: AdminUpdateAccountRequest
     ) -> AccountResponse:
-        account = self.repository.get_account_by_id(account_id)
-        if account is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+        account = self._require_account(account_id)
 
         existing_account = self.repository.get_account_by_username(payload.username)
         if existing_account is not None and existing_account.id != account_id:
@@ -75,9 +82,7 @@ class AccountService:
         return self._to_response(updated)
 
     def delete_account(self, account_id: int) -> None:
-        account = self.repository.get_account_by_id(account_id)
-        if account is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+        account = self._require_account(account_id)
         self.repository.delete_account(account)
 
     def seed_defaults(self) -> None:
@@ -106,3 +111,9 @@ class AccountService:
             username=account.username,
             roles=sorted(role.name for role in account.roles),
         )
+
+    def _require_account(self, account_id: int) -> Account:
+        account = self.repository.get_account_by_id(account_id)
+        if account is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+        return account

@@ -16,8 +16,8 @@ The repository currently contains the bootstrap for the target microservice plat
 Current implementation progress:
 - `account-service`: implemented with JWT auth, seeded users, account CRUD, and doctor directory.
 - `hospital-service`: implemented with hospital CRUD and room management.
-- `timetable-service`: implemented with schedule CRUD, slot generation, and appointment booking.
-- `document-service`: implemented with medical history CRUD, patient access rules, and Elasticsearch-backed search.
+- `timetable-service`: implemented with schedule CRUD, slot generation, appointment booking, and cross-service reference validation.
+- `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, and cross-service reference validation.
 
 ## Services
 
@@ -70,6 +70,12 @@ L- .github/workflows/
    `pytest`
 4. Start the full local stack:
    `docker-compose up -d`
+
+## Service interaction
+
+- `timetable-service` validates doctors through `account-service` and validates hospitals and rooms through `hospital-service`.
+- `document-service` validates patients and doctors through `account-service` and validates hospitals and rooms through `hospital-service`.
+- Internal service-to-service contracts are protected with `X-Internal-Token`.
 
 ## Versioning and releases
 

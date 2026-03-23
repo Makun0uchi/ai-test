@@ -7,6 +7,7 @@ from .core.config import Settings
 from .core.database import DatabaseManager
 from .models import Base  # noqa: F401
 from .routers.hospitals import router as hospitals_router
+from .routers.internal import router as internal_router
 from .routers.system import router as system_router
 
 
@@ -36,6 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.include_router(system_router)
     app.include_router(hospitals_router)
+    app.include_router(internal_router)
     return app
 
 

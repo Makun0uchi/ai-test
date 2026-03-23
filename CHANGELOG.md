@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-24
+
+### Added
+- Added protected internal HTTP contracts in `account-service` and `hospital-service` for service-to-service reference validation.
+- Added shared internal reference validator client for synchronous cross-service checks.
+- Added write-path validation in `timetable-service` for doctor, hospital, and room references.
+- Added write-path validation in `document-service` for patient, doctor, hospital, and room references.
+- Added tests for internal contracts and cross-service validation flows, plus shared client tests with mocked upstream services.
+
 ## [0.5.0] - 2026-03-24
 
 ### Added

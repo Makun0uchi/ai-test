@@ -1,13 +1,56 @@
-﻿from collections.abc import Iterator
+from collections.abc import Iterator
 from datetime import datetime
 from typing import Any, cast
 
 import jwt
 import pytest
+from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
+from libs.service_common.reference_validation import ReferenceValidator
 
 from services.timetable_service.app.core.config import Settings
 from services.timetable_service.app.main import create_app
+
+
+class StubReferenceValidator(ReferenceValidator):
+    def __init__(self) -> None:
+        self.doctors = {5, 6, 7, 8}
+        self.hospitals = {
+            1: {"101", "102"},
+            2: {"201", "202"},
+            3: {"301"},
+            4: {"401"},
+        }
+
+    def ensure_account_has_role(
+        self,
+        account_id: int,
+        *,
+        role: str,
+        missing_detail: str,
+        wrong_role_detail: str,
+    ) -> None:
+        if role != "Doctor":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=wrong_role_detail)
+        if account_id not in self.doctors:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=missing_detail)
+
+    def ensure_hospital_exists(self, hospital_id: int, *, missing_detail: str) -> None:
+        if hospital_id not in self.hospitals:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=missing_detail)
+
+    def ensure_hospital_room_exists(
+        self,
+        hospital_id: int,
+        room: str,
+        *,
+        missing_detail: str,
+    ) -> None:
+        if room not in self.hospitals.get(hospital_id, set()):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=missing_detail)
+
+    def close(self) -> None:
+        return None
 
 
 @pytest.fixture()
@@ -17,7 +60,9 @@ def client(tmp_path) -> Iterator[TestClient]:
         JWT_SECRET_KEY="test-secret-key",
     )
 
-    with TestClient(create_app(settings)) as test_client:
+    with TestClient(
+        create_app(settings, reference_validator=StubReferenceValidator())
+    ) as test_client:
         yield test_client
 
 
@@ -164,6 +209,42 @@ def test_overlapping_timetable_is_rejected(client: TestClient) -> None:
     )
 
     assert overlap_response.status_code == 409
+
+
+def test_unknown_doctor_reference_is_rejected(client: TestClient) -> None:
+    settings = _settings(client)
+    response = client.post(
+        "/api/Timetable",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "hospitalId": 1,
+            "doctorId": 999,
+            "from": _dt("2026-03-24T10:00:00"),
+            "to": _dt("2026-03-24T11:00:00"),
+            "room": "101",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Doctor account not found"
+
+
+def test_unknown_hospital_room_is_rejected(client: TestClient) -> None:
+    settings = _settings(client)
+    response = client.post(
+        "/api/Timetable",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "hospitalId": 1,
+            "doctorId": 5,
+            "from": _dt("2026-03-24T10:00:00"),
+            "to": _dt("2026-03-24T11:00:00"),
+            "room": "999",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Hospital room not found"
 
 
 def test_user_can_book_and_cancel_appointment(client: TestClient) -> None:

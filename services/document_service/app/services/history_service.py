@@ -1,6 +1,7 @@
 ﻿from datetime import datetime
 
 from fastapi import HTTPException, status
+from libs.service_common.reference_validation import ReferenceValidator
 
 from ..core.security import AuthContext
 from ..models.history import HistoryRecord
@@ -10,9 +11,15 @@ from ..search.base import SearchGateway, SearchQuery
 
 
 class HistoryService:
-    def __init__(self, repository: HistoryRepository, search_gateway: SearchGateway) -> None:
+    def __init__(
+        self,
+        repository: HistoryRepository,
+        search_gateway: SearchGateway,
+        reference_validator: ReferenceValidator,
+    ) -> None:
         self.repository = repository
         self.search_gateway = search_gateway
+        self.reference_validator = reference_validator
 
     def list_by_patient(self, patient_id: int, principal: AuthContext) -> list[HistoryResponse]:
         self._ensure_history_access(patient_id, principal)
@@ -26,6 +33,7 @@ class HistoryService:
 
     def create_history(self, payload: HistoryRequest, principal: AuthContext) -> HistoryResponse:
         self._ensure_editor(principal)
+        self._validate_references(payload)
         history = self.repository.create_history(
             date=payload.date.replace(tzinfo=None),
             patient_id=payload.patient_id,
@@ -42,6 +50,7 @@ class HistoryService:
     ) -> HistoryResponse:
         self._ensure_editor(principal)
         history = self._require_history(history_id)
+        self._validate_references(payload)
         updated = self.repository.update_history(
             history,
             date=payload.date.replace(tzinfo=None),
@@ -113,6 +122,29 @@ class HistoryService:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
             )
+
+    def _validate_references(self, payload: HistoryRequest) -> None:
+        self.reference_validator.ensure_account_has_role(
+            payload.patient_id,
+            role="User",
+            missing_detail="Patient account not found",
+            wrong_role_detail="Referenced account is not a patient",
+        )
+        self.reference_validator.ensure_account_has_role(
+            payload.doctor_id,
+            role="Doctor",
+            missing_detail="Doctor account not found",
+            wrong_role_detail="Referenced account is not a doctor",
+        )
+        self.reference_validator.ensure_hospital_exists(
+            payload.hospital_id,
+            missing_detail="Hospital not found",
+        )
+        self.reference_validator.ensure_hospital_room_exists(
+            payload.hospital_id,
+            payload.room,
+            missing_detail="Hospital room not found",
+        )
 
     def _to_response(self, history: HistoryRecord) -> HistoryResponse:
         return HistoryResponse(

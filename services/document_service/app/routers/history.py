@@ -1,9 +1,15 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status
+from libs.service_common.reference_validation import ReferenceValidator
 from sqlalchemy.orm import Session
 
-from ..core.dependencies import get_current_principal, get_search_gateway, get_session
+from ..core.dependencies import (
+    get_current_principal,
+    get_reference_validator,
+    get_search_gateway,
+    get_session,
+)
 from ..core.security import AuthContext
 from ..repositories.history_repository import HistoryRepository
 from ..schemas.history import HistoryRequest, HistoryResponse, HistorySearchResponse
@@ -13,8 +19,12 @@ from ..services.history_service import HistoryService
 router = APIRouter(prefix="/api/History", tags=["history"])
 
 
-def _service(session: Session, search_gateway: SearchGateway) -> HistoryService:
-    return HistoryService(HistoryRepository(session), search_gateway)
+def _service(
+    session: Session,
+    search_gateway: SearchGateway,
+    reference_validator: ReferenceValidator,
+) -> HistoryService:
+    return HistoryService(HistoryRepository(session), search_gateway, reference_validator)
 
 
 @router.get("/Search", response_model=HistorySearchResponse)
@@ -22,6 +32,7 @@ def search_history(
     principal: AuthContext = Depends(get_current_principal),
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
+    reference_validator: ReferenceValidator = Depends(get_reference_validator),
     query: str | None = Query(default=None),
     patient_id: int | None = Query(default=None, alias="patientId"),
     doctor_id: int | None = Query(default=None, alias="doctorId"),
@@ -32,7 +43,7 @@ def search_history(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
 ) -> HistorySearchResponse:
-    return _service(session, search_gateway).search(
+    return _service(session, search_gateway, reference_validator).search(
         principal=principal,
         query=query,
         patient_id=patient_id,
@@ -52,8 +63,11 @@ def list_patient_history(
     principal: AuthContext = Depends(get_current_principal),
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
+    reference_validator: ReferenceValidator = Depends(get_reference_validator),
 ) -> list[HistoryResponse]:
-    return _service(session, search_gateway).list_by_patient(patient_id, principal)
+    return _service(session, search_gateway, reference_validator).list_by_patient(
+        patient_id, principal
+    )
 
 
 @router.get("/{history_id}", response_model=HistoryResponse)
@@ -62,8 +76,9 @@ def get_history(
     principal: AuthContext = Depends(get_current_principal),
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
+    reference_validator: ReferenceValidator = Depends(get_reference_validator),
 ) -> HistoryResponse:
-    return _service(session, search_gateway).get_history(history_id, principal)
+    return _service(session, search_gateway, reference_validator).get_history(history_id, principal)
 
 
 @router.post("", response_model=HistoryResponse, status_code=status.HTTP_201_CREATED)
@@ -72,8 +87,9 @@ def create_history(
     principal: AuthContext = Depends(get_current_principal),
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
+    reference_validator: ReferenceValidator = Depends(get_reference_validator),
 ) -> HistoryResponse:
-    return _service(session, search_gateway).create_history(payload, principal)
+    return _service(session, search_gateway, reference_validator).create_history(payload, principal)
 
 
 @router.put("/{history_id}", response_model=HistoryResponse)
@@ -83,5 +99,8 @@ def update_history(
     principal: AuthContext = Depends(get_current_principal),
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
+    reference_validator: ReferenceValidator = Depends(get_reference_validator),
 ) -> HistoryResponse:
-    return _service(session, search_gateway).update_history(history_id, payload, principal)
+    return _service(session, search_gateway, reference_validator).update_history(
+        history_id, payload, principal
+    )

@@ -1,6 +1,7 @@
 ﻿from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
+from libs.service_common.reference_validation import ReferenceValidator
 
 from ..core.security import AuthContext
 from ..models.timetable import Appointment, Timetable
@@ -17,11 +18,21 @@ MAX_DURATION = timedelta(hours=12)
 
 
 class TimetableService:
-    def __init__(self, repository: TimetableRepository) -> None:
+    def __init__(
+        self,
+        repository: TimetableRepository,
+        reference_validator: ReferenceValidator,
+    ) -> None:
         self.repository = repository
+        self.reference_validator = reference_validator
 
     def create_timetable(self, payload: TimetableRequest) -> TimetableResponse:
         starts_at, ends_at = self._validate_interval(payload.starts_at, payload.ends_at)
+        self._validate_references(
+            hospital_id=payload.hospital_id,
+            doctor_id=payload.doctor_id,
+            room=payload.room,
+        )
         self._ensure_no_overlap(
             hospital_id=payload.hospital_id,
             doctor_id=payload.doctor_id,
@@ -41,6 +52,11 @@ class TimetableService:
     def update_timetable(self, timetable_id: int, payload: TimetableRequest) -> TimetableResponse:
         timetable = self._require_timetable(timetable_id)
         starts_at, ends_at = self._validate_interval(payload.starts_at, payload.ends_at)
+        self._validate_references(
+            hospital_id=payload.hospital_id,
+            doctor_id=payload.doctor_id,
+            room=payload.room,
+        )
         self._ensure_no_overlap(
             hospital_id=payload.hospital_id,
             doctor_id=payload.doctor_id,
@@ -211,6 +227,23 @@ class TimetableService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Appointment time is outside timetable range",
             )
+
+    def _validate_references(self, *, hospital_id: int, doctor_id: int, room: str) -> None:
+        self.reference_validator.ensure_account_has_role(
+            doctor_id,
+            role="Doctor",
+            missing_detail="Doctor account not found",
+            wrong_role_detail="Referenced account is not a doctor",
+        )
+        self.reference_validator.ensure_hospital_exists(
+            hospital_id,
+            missing_detail="Hospital not found",
+        )
+        self.reference_validator.ensure_hospital_room_exists(
+            hospital_id,
+            room,
+            missing_detail="Hospital room not found",
+        )
 
     def _to_timetable_response(self, timetable: Timetable) -> TimetableResponse:
         return TimetableResponse(

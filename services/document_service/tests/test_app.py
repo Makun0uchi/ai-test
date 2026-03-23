@@ -1,13 +1,57 @@
-﻿from collections.abc import Iterator
+from collections.abc import Iterator
 from datetime import datetime
 from typing import Any, cast
 
 import jwt
 import pytest
+from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
+from libs.service_common.reference_validation import ReferenceValidator
 
 from services.document_service.app.core.config import Settings
 from services.document_service.app.main import create_app
+
+
+class StubReferenceValidator(ReferenceValidator):
+    def __init__(self) -> None:
+        self.user_accounts = {11, 13, 15, 21, 22, 31, 32, 41}
+        self.doctor_accounts = {7, 8}
+        self.hospitals = {
+            2: {"201", "202", "203"},
+            3: {"204"},
+            4: {"301", "302"},
+            5: {"401", "402"},
+            6: {"501"},
+        }
+
+    def ensure_account_has_role(
+        self,
+        account_id: int,
+        *,
+        role: str,
+        missing_detail: str,
+        wrong_role_detail: str,
+    ) -> None:
+        valid_ids = self.user_accounts if role == "User" else self.doctor_accounts
+        if account_id not in valid_ids:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=missing_detail)
+
+    def ensure_hospital_exists(self, hospital_id: int, *, missing_detail: str) -> None:
+        if hospital_id not in self.hospitals:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=missing_detail)
+
+    def ensure_hospital_room_exists(
+        self,
+        hospital_id: int,
+        room: str,
+        *,
+        missing_detail: str,
+    ) -> None:
+        if room not in self.hospitals.get(hospital_id, set()):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=missing_detail)
+
+    def close(self) -> None:
+        return None
 
 
 @pytest.fixture()
@@ -18,7 +62,9 @@ def client(tmp_path) -> Iterator[TestClient]:
         ELASTICSEARCH_URL="memory://history-tests",
     )
 
-    with TestClient(create_app(settings)) as test_client:
+    with TestClient(
+        create_app(settings, reference_validator=StubReferenceValidator())
+    ) as test_client:
         yield test_client
 
 
@@ -154,6 +200,44 @@ def test_user_cannot_create_history(client: TestClient) -> None:
     assert response.status_code == 403
 
 
+def test_unknown_patient_reference_is_rejected(client: TestClient) -> None:
+    settings = _settings(client)
+    response = client.post(
+        "/api/History",
+        headers=_headers(settings, ["Doctor"], subject=7),
+        json={
+            "date": _dt("2026-03-24T10:00:00"),
+            "pacientId": 999,
+            "hospitalId": 2,
+            "doctorId": 7,
+            "room": "201",
+            "data": "Некорректный пациент",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Patient account not found"
+
+
+def test_unknown_hospital_room_reference_is_rejected(client: TestClient) -> None:
+    settings = _settings(client)
+    response = client.post(
+        "/api/History",
+        headers=_headers(settings, ["Doctor"], subject=7),
+        json={
+            "date": _dt("2026-03-24T10:00:00"),
+            "pacientId": 11,
+            "hospitalId": 2,
+            "doctorId": 7,
+            "room": "999",
+            "data": "Некорректная палата",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Hospital room not found"
+
+
 def test_admin_can_read_any_history_by_id(client: TestClient) -> None:
     settings = _settings(client)
     create_response = client.post(
@@ -259,8 +343,9 @@ def test_user_search_is_limited_to_own_history(client: TestClient) -> None:
 
 def test_search_index_is_restored_from_database_on_startup(tmp_path) -> None:
     settings = _create_settings(tmp_path, elasticsearch_url="memory://history-reindex")
+    reference_validator = StubReferenceValidator()
 
-    with TestClient(create_app(settings)) as first_client:
+    with TestClient(create_app(settings, reference_validator=reference_validator)) as first_client:
         create_response = first_client.post(
             "/api/History",
             headers=_headers(settings, ["Doctor"], subject=7),
@@ -275,7 +360,9 @@ def test_search_index_is_restored_from_database_on_startup(tmp_path) -> None:
         )
         assert create_response.status_code == 201
 
-    with TestClient(create_app(settings)) as second_client:
+    with TestClient(
+        create_app(settings, reference_validator=StubReferenceValidator())
+    ) as second_client:
         search_response = second_client.get(
             "/api/History/Search",
             params={"query": "кашля"},

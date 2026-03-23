@@ -41,6 +41,10 @@ def _settings(client: TestClient) -> Settings:
     return cast(Settings, cast(Any, client.app).state.settings)
 
 
+def _internal_headers(settings: Settings) -> dict[str, str]:
+    return {"X-Internal-Token": settings.internal_api_key}
+
+
 def test_health_endpoint_exposes_service_metadata(client: TestClient) -> None:
     response = client.get("/health")
 
@@ -179,3 +183,38 @@ def test_manager_can_delete_hospital(client: TestClient) -> None:
         headers=_headers(settings, ["User"]),
     )
     assert get_response.status_code == 404
+
+
+def test_internal_hospital_reference_exposes_hospital_and_room_lookup(client: TestClient) -> None:
+    settings = _settings(client)
+    create_response = client.post(
+        "/api/Hospitals",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "name": "Internal Lookup Hospital",
+            "address": "Mira 10",
+            "contactPhone": "+7-999-000-00-06",
+            "rooms": ["701", "702"],
+        },
+    )
+    hospital_id = create_response.json()["id"]
+
+    hospital_response = client.get(
+        f"/internal/hospitals/{hospital_id}",
+        headers=_internal_headers(settings),
+    )
+    assert hospital_response.status_code == 200
+    assert hospital_response.json()["rooms"] == ["701", "702"]
+
+    room_response = client.get(
+        f"/internal/hospitals/{hospital_id}/rooms/701",
+        headers=_internal_headers(settings),
+    )
+    assert room_response.status_code == 200
+    assert room_response.json() == {"hospitalId": hospital_id, "room": "701"}
+
+    missing_room = client.get(
+        f"/internal/hospitals/{hospital_id}/rooms/799",
+        headers=_internal_headers(settings),
+    )
+    assert missing_room.status_code == 404

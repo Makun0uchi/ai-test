@@ -1,7 +1,8 @@
-﻿from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from libs.service_common.logging import configure_logging
+from libs.service_common.reference_validation import HttpReferenceValidator, ReferenceValidator
 
 from .core.config import Settings
 from .core.database import DatabaseManager
@@ -20,6 +21,14 @@ def create_search_gateway(settings: Settings) -> SearchGateway:
     return ElasticsearchSearchGateway(settings)
 
 
+def create_reference_validator(settings: Settings) -> ReferenceValidator:
+    return HttpReferenceValidator(
+        account_service_url=settings.account_service_url,
+        hospital_service_url=settings.hospital_service_url,
+        internal_api_key=settings.internal_api_key,
+    )
+
+
 def sync_search_index(database_manager: DatabaseManager, search_gateway: SearchGateway) -> None:
     session = next(database_manager.get_session())
     try:
@@ -30,7 +39,10 @@ def sync_search_index(database_manager: DatabaseManager, search_gateway: SearchG
         session.close()
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    reference_validator: ReferenceValidator | None = None,
+) -> FastAPI:
     app_settings = settings or Settings()
     configure_logging(app_settings.service_name)
 
@@ -40,13 +52,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         database_manager.create_tables()
         search_gateway = create_search_gateway(app_settings)
         search_gateway.setup()
+        app_reference_validator = reference_validator or create_reference_validator(app_settings)
         sync_search_index(database_manager, search_gateway)
 
         app.state.settings = app_settings
         app.state.database_manager = database_manager
         app.state.search_gateway = search_gateway
+        app.state.reference_validator = app_reference_validator
 
         yield
+        app_reference_validator.close()
         database_manager.dispose()
 
     app = FastAPI(

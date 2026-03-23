@@ -3,6 +3,7 @@ from typing import cast
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from libs.service_common.reference_validation import ReferenceValidator
 from sqlalchemy.orm import Session
 
 from ..search.base import SearchGateway
@@ -22,6 +23,10 @@ def get_session(request: Request) -> Generator[Session, None, None]:
 
 def get_search_gateway(request: Request) -> SearchGateway:
     return cast(SearchGateway, request.app.state.search_gateway)
+
+
+def get_reference_validator(request: Request) -> ReferenceValidator:
+    return cast(ReferenceValidator, request.app.state.reference_validator)
 
 
 def get_current_principal(

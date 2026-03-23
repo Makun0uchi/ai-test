@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -30,6 +30,10 @@ def _sign_in(client: TestClient, username: str, password: str) -> dict[str, str]
 
 def _auth_headers(token_pair: dict[str, str]) -> dict[str, str]:
     return {"Authorization": f"Bearer {token_pair['accessToken']}"}
+
+
+def _internal_headers(settings: Settings) -> dict[str, str]:
+    return {"X-Internal-Token": settings.internal_api_key}
 
 
 def test_health_endpoint_exposes_service_metadata(client: TestClient) -> None:
@@ -154,3 +158,14 @@ def test_refresh_validate_and_sign_out_flow(client: TestClient) -> None:
         json={"refreshToken": refreshed_pair["refreshToken"]},
     )
     assert revoked_refresh_response.status_code == 401
+
+
+def test_internal_account_reference_requires_valid_internal_token(client: TestClient) -> None:
+    settings = cast(Settings, cast(Any, client.app).state.settings)
+
+    unauthorized = client.get("/internal/accounts/1")
+    assert unauthorized.status_code == 401
+
+    response = client.get("/internal/accounts/4", headers=_internal_headers(settings))
+    assert response.status_code == 200
+    assert response.json() == {"id": 4, "username": "user", "roles": ["User"]}

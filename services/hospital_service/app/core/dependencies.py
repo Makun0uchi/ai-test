@@ -1,7 +1,7 @@
 ﻿from collections.abc import Callable, Generator
 from typing import cast
 
-from fastapi import Depends, Request, status
+from fastapi import Depends, Header, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -41,3 +41,16 @@ def require_roles(*roles: str) -> Callable[[AuthContext], AuthContext]:
         return principal
 
     return dependency
+
+
+def require_internal_token(
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+    settings: Settings = Depends(get_settings),
+) -> None:
+    if x_internal_token != settings.internal_api_key:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid internal token",
+        )

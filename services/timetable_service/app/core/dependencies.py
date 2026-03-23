@@ -3,6 +3,7 @@ from typing import cast
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from libs.service_common.reference_validation import ReferenceValidator
 from sqlalchemy.orm import Session
 
 from .config import Settings
@@ -17,6 +18,10 @@ def get_settings(request: Request) -> Settings:
 
 def get_session(request: Request) -> Generator[Session, None, None]:
     yield from request.app.state.database_manager.get_session()
+
+
+def get_reference_validator(request: Request) -> ReferenceValidator:
+    return cast(ReferenceValidator, request.app.state.reference_validator)
 
 
 def get_current_principal(

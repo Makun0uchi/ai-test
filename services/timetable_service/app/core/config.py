@@ -20,3 +20,6 @@ class Settings(BaseSettings):
     )
     jwt_secret_key: str = Field(default="local-account-service-secret", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"
+    internal_api_key: str = Field(default="local-internal-api-key", alias="INTERNAL_API_KEY")
+    account_service_url: str = Field(default="http://localhost:8081", alias="ACCOUNT_SERVICE_URL")
+    hospital_service_url: str = Field(default="http://localhost:8082", alias="HOSPITAL_SERVICE_URL")

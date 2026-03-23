@@ -9,6 +9,7 @@ from .repositories.account_repository import AccountRepository
 from .routers.accounts import router as accounts_router
 from .routers.authentication import router as authentication_router
 from .routers.doctors import router as doctors_router
+from .routers.internal import router as internal_router
 from .routers.system import router as system_router
 from .services.account_service import AccountService
 
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(authentication_router)
     app.include_router(accounts_router)
     app.include_router(doctors_router)
+    app.include_router(internal_router)
     return app
 
 
