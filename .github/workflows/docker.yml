@@ -1,0 +1,43 @@
+name: Docker
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - account_service
+          - hospital_service
+          - timetable_service
+          - document_service
+        include:
+          - service: account_service
+            module: services.account_service.app.main:app
+            image_name: account-service
+          - service: hospital_service
+            module: services.hospital_service.app.main:app
+            image_name: hospital-service
+          - service: timetable_service
+            module: services.timetable_service.app.main:app
+            image_name: timetable-service
+          - service: document_service
+            module: services.document_service.app.main:app
+            image_name: document-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          docker build \
+            --file deploy/docker/Dockerfile \
+            --build-arg APP_MODULE=${{ matrix.module }} \
+            --tag ${{ matrix.image_name }}:ci \
+            .

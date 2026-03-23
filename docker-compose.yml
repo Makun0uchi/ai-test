@@ -1,0 +1,173 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: simbir-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: simbir-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
+    container_name: elasticsearch-service
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.2
+    container_name: logstash-service
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    volumes:
+      - ./deploy/elk/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.2
+    container_name: kibana-service
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  account-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        APP_MODULE: services.account_service.app.main:app
+    container_name: account-service
+    environment:
+      SERVICE_ENV: docker
+      PORT: 8081
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/account_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  hospital-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        APP_MODULE: services.hospital_service.app.main:app
+    container_name: hospital-service
+    environment:
+      SERVICE_ENV: docker
+      PORT: 8082
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/hospital_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  timetable-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        APP_MODULE: services.timetable_service.app.main:app
+    container_name: timetable-service
+    environment:
+      SERVICE_ENV: docker
+      PORT: 8083
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/timetable_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  document-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        APP_MODULE: services.document_service.app.main:app
+    container_name: document-service
+    environment:
+      SERVICE_ENV: docker
+      PORT: 8084
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/document_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8084/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  elasticsearch_data:
