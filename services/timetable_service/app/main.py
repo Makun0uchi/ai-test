@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from libs.service_common.environment import validate_service_environment
 from libs.service_common.logging import CorrelationIdMiddleware, configure_logging
 from libs.service_common.messaging import EventSubscriber
 from libs.service_common.migrations import run_database_migrations
@@ -73,6 +74,7 @@ def create_app(
     hospital_event_subscriber: EventSubscriber | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
+    validate_service_environment(app_settings)
     validate_security_settings(app_settings)
     configure_logging(
         app_settings.service_name,

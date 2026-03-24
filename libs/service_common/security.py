@@ -4,10 +4,11 @@ from typing import Protocol
 
 from fastapi import HTTPException, status
 
+from .environment import is_production_like
+
 DEFAULT_JWT_SECRET_KEY = "local-account-service-secret"
 DEFAULT_INTERNAL_API_KEY = "local-internal-api-key"
 MIN_SECRET_LENGTH = 32
-SECURITY_ENFORCED_ENVS = frozenset({"staging", "production"})
 
 
 class SecuritySettings(Protocol):
@@ -19,7 +20,7 @@ class SecuritySettings(Protocol):
 
 
 def validate_security_settings(settings: SecuritySettings) -> None:
-    if settings.service_env not in SECURITY_ENFORCED_ENVS:
+    if not is_production_like(settings.service_env):
         return
 
     issues: list[str] = []

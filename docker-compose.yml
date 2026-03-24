@@ -70,7 +70,7 @@ services:
         APP_MODULE: services.account_service.app.main:app
     container_name: account-service
     environment:
-      SERVICE_ENV: docker
+      SERVICE_ENV: local
       PORT: 8081
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/account_db
       JWT_SECRET_KEY: local-account-service-secret
@@ -101,7 +101,7 @@ services:
         APP_MODULE: services.hospital_service.app.main:app
     container_name: hospital-service
     environment:
-      SERVICE_ENV: docker
+      SERVICE_ENV: local
       PORT: 8082
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/hospital_db
       JWT_SECRET_KEY: local-account-service-secret
@@ -132,7 +132,7 @@ services:
         APP_MODULE: services.timetable_service.app.main:app
     container_name: timetable-service
     environment:
-      SERVICE_ENV: docker
+      SERVICE_ENV: local
       PORT: 8083
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/timetable_db
       JWT_SECRET_KEY: local-account-service-secret
@@ -165,7 +165,7 @@ services:
         APP_MODULE: services.document_service.app.main:app
     container_name: document-service
     environment:
-      SERVICE_ENV: docker
+      SERVICE_ENV: local
       PORT: 8084
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/document_db
       JWT_SECRET_KEY: local-account-service-secret

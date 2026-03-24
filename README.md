@@ -89,6 +89,15 @@ L- .github/workflows/
 4. Start the full local stack:
    `docker-compose up -d`
 
+## Environment profiles
+
+- supported `SERVICE_ENV` values are `local`, `ci`, `staging`, `production`;
+- root [docker-compose.yml](D:/Study/codex/ai-test/docker-compose.yml) is the local baseline profile;
+- CI and staging overrides live in:
+  [docker-compose.ci.yml](D:/Study/codex/ai-test/deploy/compose/docker-compose.ci.yml)
+  [docker-compose.staging.yml](D:/Study/codex/ai-test/deploy/compose/docker-compose.staging.yml)
+- full environment matrix and deployment strategy are documented in [environment_profiles.md](D:/Study/codex/ai-test/docs/environment_profiles.md).
+
 ## Migrations
 
 - Table schema is managed by `Alembic` in each service directory.

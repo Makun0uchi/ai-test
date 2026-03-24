@@ -1,7 +1,7 @@
 # Simbir.Health Backend: execution backlog
 
 ## Current milestone baseline
-- Baseline version: `v0.19.0`
+- Baseline version: `v0.20.0`
 - Scope already done:
   - microservice CRUD and auth flows;
   - migrations;
@@ -150,10 +150,18 @@ Implemented outputs:
 - `docs/security/jwt_strategy.md`.
 
 ### P1.4 Environment profiles
+Status:
+- completed in `v0.21.0`
+
 Tasks:
 - standardize `local`, `ci`, `staging`, `production`;
 - document required variables, ports, storage, and dependencies;
 - define compose override or deployment manifests strategy.
+
+Implemented outputs:
+- shared `SERVICE_ENV` validation in `libs/service_common/environment.py`;
+- compose overlays in `deploy/compose/docker-compose.ci.yml` and `deploy/compose/docker-compose.staging.yml`;
+- environment matrix in `docs/environment_profiles.md`.
 
 ### P1.5 Operational runbooks
 Tasks:

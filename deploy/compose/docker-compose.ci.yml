@@ -1,0 +1,28 @@
+services:
+  account-service:
+    environment:
+      SERVICE_ENV: ci
+      LOGSTASH_HOST: ""
+      JWT_SECRET_KEY: ci-account-service-secret-000000000000
+      INTERNAL_API_KEY: ci-internal-token-0000000000000000
+
+  hospital-service:
+    environment:
+      SERVICE_ENV: ci
+      LOGSTASH_HOST: ""
+      JWT_SECRET_KEY: ci-account-service-secret-000000000000
+      INTERNAL_API_KEY: ci-internal-token-0000000000000000
+
+  timetable-service:
+    environment:
+      SERVICE_ENV: ci
+      LOGSTASH_HOST: ""
+      JWT_SECRET_KEY: ci-account-service-secret-000000000000
+      INTERNAL_API_KEY: ci-internal-token-0000000000000000
+
+  document-service:
+    environment:
+      SERVICE_ENV: ci
+      LOGSTASH_HOST: ""
+      JWT_SECRET_KEY: ci-account-service-secret-000000000000
+      INTERNAL_API_KEY: ci-internal-token-0000000000000000

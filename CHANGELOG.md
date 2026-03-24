@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-03-24
+
+### Added
+- Added shared `SERVICE_ENV` validation in `libs/service_common/environment.py`.
+- Added environment profile documentation in `docs/environment_profiles.md`.
+- Added compose overlays for CI and staging in `deploy/compose/docker-compose.ci.yml` and `deploy/compose/docker-compose.staging.yml`.
+- Added regression tests for supported and unsupported service environment profiles in `tests/test_environment_profiles.py`.
+
+### Changed
+- All services now reject unsupported `SERVICE_ENV` values during startup.
+- Root `docker-compose.yml` now uses the standardized `local` profile instead of the ad-hoc `docker` value.
+- The execution backlog now marks environment profiles as completed.
+
 ## [0.20.0] - 2026-03-24
 
 ### Added

@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from libs.service_common.environment import validate_service_environment
 from libs.service_common.logging import CorrelationIdMiddleware, configure_logging
 from libs.service_common.migrations import run_database_migrations
 from libs.service_common.security import validate_security_settings
@@ -40,6 +41,7 @@ def create_app(
     account_event_publisher: AccountEventPublisher | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
+    validate_service_environment(app_settings)
     validate_security_settings(app_settings)
     configure_logging(
         app_settings.service_name,
