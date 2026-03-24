@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-24
+
+### Added
+- Added Alembic-based migration support for all four microservices.
+- Added versioned initial revisions for `account-service`, `hospital-service`, `timetable-service`, and `document-service`.
+- Added a shared migration runner and migration smoke tests to verify schema bootstrap from revisions.
+
+### Changed
+- Replaced startup-time `create_all()` schema bootstrap with `alembic upgrade head` on service startup.
+- Clarified repository documentation so PostgreSQL database creation and table migrations are separated cleanly.
+
 ## [0.6.0] - 2026-03-24
 
 ### Added

@@ -1,15 +1,18 @@
-﻿from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from libs.service_common.logging import configure_logging
+from libs.service_common.migrations import run_database_migrations
 from libs.service_common.reference_validation import HttpReferenceValidator, ReferenceValidator
 
 from .core.config import Settings
 from .core.database import DatabaseManager
-from .models import Base  # noqa: F401
 from .routers.appointment import router as appointment_router
 from .routers.system import router as system_router
 from .routers.timetable import router as timetable_router
+
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def create_reference_validator(settings: Settings) -> ReferenceValidator:
@@ -29,8 +32,11 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        run_database_migrations(
+            alembic_ini_path=SERVICE_ROOT / "alembic.ini",
+            database_url=app_settings.database_url,
+        )
         database_manager = DatabaseManager(app_settings.database_url)
-        database_manager.create_tables()
         app_reference_validator = reference_validator or create_reference_validator(app_settings)
 
         app.state.settings = app_settings

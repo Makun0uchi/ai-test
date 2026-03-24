@@ -1,14 +1,17 @@
-﻿from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from libs.service_common.logging import configure_logging
+from libs.service_common.migrations import run_database_migrations
 
 from .core.config import Settings
 from .core.database import DatabaseManager
-from .models import Base  # noqa: F401
 from .routers.hospitals import router as hospitals_router
 from .routers.internal import router as internal_router
 from .routers.system import router as system_router
+
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -17,8 +20,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        run_database_migrations(
+            alembic_ini_path=SERVICE_ROOT / "alembic.ini",
+            database_url=app_settings.database_url,
+        )
         database_manager = DatabaseManager(app_settings.database_url)
-        database_manager.create_tables()
 
         app.state.settings = app_settings
         app.state.database_manager = database_manager

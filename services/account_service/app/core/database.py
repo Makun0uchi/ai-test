@@ -4,8 +4,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from ..models.base import Base
-
 
 class DatabaseManager:
     def __init__(self, database_url: str) -> None:
@@ -18,9 +16,6 @@ class DatabaseManager:
             expire_on_commit=False,
             future=True,
         )
-
-    def create_tables(self) -> None:
-        Base.metadata.create_all(self.engine)
 
     def get_session(self) -> Generator[Session, None, None]:
         session = self.session_factory()

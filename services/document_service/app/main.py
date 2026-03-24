@@ -1,18 +1,21 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from libs.service_common.logging import configure_logging
+from libs.service_common.migrations import run_database_migrations
 from libs.service_common.reference_validation import HttpReferenceValidator, ReferenceValidator
 
 from .core.config import Settings
 from .core.database import DatabaseManager
-from .models import Base  # noqa: F401
 from .repositories.history_repository import HistoryRepository
 from .routers.history import router as history_router
 from .routers.system import router as system_router
 from .search.base import SearchGateway
 from .search.elasticsearch_gateway import ElasticsearchSearchGateway
 from .search.memory_gateway import InMemorySearchGateway
+
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def create_search_gateway(settings: Settings) -> SearchGateway:
@@ -48,8 +51,11 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        run_database_migrations(
+            alembic_ini_path=SERVICE_ROOT / "alembic.ini",
+            database_url=app_settings.database_url,
+        )
         database_manager = DatabaseManager(app_settings.database_url)
-        database_manager.create_tables()
         search_gateway = create_search_gateway(app_settings)
         search_gateway.setup()
         app_reference_validator = reference_validator or create_reference_validator(app_settings)

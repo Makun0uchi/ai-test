@@ -41,6 +41,7 @@ Current implementation progress:
 - Elasticsearch
 - Logstash
 - Kibana
+- Alembic migrations
 - Docker / docker-compose
 - GitHub Actions
 - pytest / ruff / black / mypy
@@ -70,6 +71,17 @@ L- .github/workflows/
    `pytest`
 4. Start the full local stack:
    `docker-compose up -d`
+
+## Migrations
+
+- Table schema is managed by `Alembic` in each service directory.
+- On startup, every service runs `alembic upgrade head` before serving requests.
+- [deploy/postgres/init/01-create-databases.sql](D:/Study/codex/ai-test/deploy/postgres/init/01-create-databases.sql) only creates PostgreSQL databases; it does not create application tables.
+- Initial revisions live under:
+  `services/account_service/migrations/versions/0001_initial.py`
+  `services/hospital_service/migrations/versions/0001_initial.py`
+  `services/timetable_service/migrations/versions/0001_initial.py`
+  `services/document_service/migrations/versions/0001_initial.py`
 
 ## Service interaction
 
