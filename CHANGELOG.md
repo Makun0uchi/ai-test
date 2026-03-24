@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-03-24
+
+### Fixed
+- Fixed Alembic startup for legacy local databases that already contain service tables but do not yet have an `alembic_version` table.
+- Shortened the `timetable-service` head revision identifier to stay within PostgreSQL's default Alembic `VARCHAR(32)` limit.
+- Added migration bootstrap regression coverage for legacy `0001` and `0002` schema states without Alembic metadata.
+- Added a guard test to prevent future Alembic revision IDs from exceeding PostgreSQL's default version table limit.
+- Fixed `tests/test_security_configuration.py` to build `BaseSettings` payloads through environment aliases, matching runtime configuration loading.
+
 ## [0.22.0] - 2026-03-24
 
 ### Added

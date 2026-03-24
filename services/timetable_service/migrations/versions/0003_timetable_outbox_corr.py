@@ -1,6 +1,6 @@
 """add timetable outbox correlation id
 
-Revision ID: 0003_timetable_outbox_correlation
+Revision ID: 0003_timetable_outbox_corr
 Revises: 0002_timetable_outbox
 Create Date: 2026-03-24 00:00:01
 """
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0003_timetable_outbox_correlation"
+revision: str = "0003_timetable_outbox_corr"
 down_revision: str | None = "0002_timetable_outbox"
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None

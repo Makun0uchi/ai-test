@@ -102,6 +102,7 @@ L- .github/workflows/
 
 - Table schema is managed by `Alembic` in each service directory.
 - On startup, every service runs `alembic upgrade head` before serving requests.
+- If a local PostgreSQL volume still contains a pre-Alembic service schema, startup now bootstraps the missing `alembic_version` state and then applies only the remaining revisions.
 - [01-create-databases.sql](D:/Study/codex/ai-test/deploy/postgres/init/01-create-databases.sql) only creates PostgreSQL databases; it does not create application tables.
 - Initial revisions live under:
   `services/account_service/migrations/versions/0001_initial.py`

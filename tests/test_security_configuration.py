@@ -11,9 +11,16 @@ from services.account_service.app.main import create_app
 def _settings(**overrides: object) -> AccountSettings:
     payload: dict[str, object] = {
         "service_env": "local",
-        "jwt_secret_key": DEFAULT_JWT_SECRET_KEY,
-        "internal_api_key": DEFAULT_INTERNAL_API_KEY,
+        "JWT_SECRET_KEY": DEFAULT_JWT_SECRET_KEY,
+        "INTERNAL_API_KEY": DEFAULT_INTERNAL_API_KEY,
     }
+    alias_overrides = {
+        "JWT_SECRET_KEY": overrides.pop("jwt_secret_key", None),
+        "INTERNAL_API_KEY": overrides.pop("internal_api_key", None),
+        "DATABASE_URL": overrides.pop("database_url", None),
+        "JWT_ALGORITHM": overrides.pop("jwt_algorithm", None),
+    }
+    payload.update({key: value for key, value in alias_overrides.items() if value is not None})
     payload.update(overrides)
     return AccountSettings.model_validate(payload)
 
