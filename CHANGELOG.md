@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-03-24
+
+### Added
+- Added a production-readiness roadmap in `plans/003_production_readiness_plan.md`.
+- Added an execution backlog in `plans/004_execution_backlog.md` with P0/P1/P2 prioritization and release criteria.
+
 ## [0.13.0] - 2026-03-24
 
 ### Added

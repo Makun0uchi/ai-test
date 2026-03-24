@@ -115,3 +115,5 @@ L- .github/workflows/
 
 - `plans/001_requirements_analysis.md`
 - `plans/002_architecture_and_delivery_plan.md`
+- `plans/003_production_readiness_plan.md`
+- `plans/004_execution_backlog.md`
