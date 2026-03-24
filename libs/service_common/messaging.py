@@ -10,7 +10,17 @@ from typing import Any, Protocol, TypeVar
 import aio_pika
 from pydantic import BaseModel
 
+from .logging import get_correlation_id, log_event, reset_correlation_id, set_correlation_id
+
 LOGGER = logging.getLogger("simbir.health.messaging")
+
+
+def _header_as_str(value: Any) -> str | None:
+    return value if isinstance(value, str) else None
+
+
+def _header_as_int(value: Any) -> int | None:
+    return value if isinstance(value, int) else None
 
 
 @dataclass(slots=True)
@@ -18,6 +28,9 @@ class EventMessage:
     event_type: str
     routing_key: str
     payload: dict[str, Any]
+    correlation_id: str | None = None
+    aggregate_type: str | None = None
+    aggregate_id: int | None = None
 
 
 EventHandler = Callable[[EventMessage], Awaitable[None]]
@@ -50,6 +63,16 @@ class InMemoryTopicBroker:
         self._subscribers: list[InMemoryTopicSubscriber] = []
 
     async def publish(self, message: EventMessage) -> None:
+        if message.correlation_id is None:
+            message.correlation_id = get_correlation_id()
+        log_event(
+            "event published",
+            correlation_id=message.correlation_id,
+            event_type=message.event_type,
+            routing_key=message.routing_key,
+            aggregate_type=message.aggregate_type,
+            aggregate_id=message.aggregate_id,
+        )
         self.published_messages.append(message)
         for subscriber in list(self._subscribers):
             if subscriber.matches(message.routing_key):
@@ -117,12 +140,24 @@ class InMemoryTopicSubscriber:
                 await handler(message)
             except Exception:
                 self.failed_messages.append(message)
+                log_event(
+                    "event handler failed",
+                    correlation_id=message.correlation_id,
+                    event_type=message.event_type,
+                    routing_key=message.routing_key,
+                    aggregate_type=message.aggregate_type,
+                    aggregate_id=message.aggregate_id,
+                    queue_name=self.queue_name,
+                )
                 LOGGER.exception(
                     "In-memory event handler failed",
                     extra={
+                        "correlation_id": message.correlation_id,
                         "queue_name": self.queue_name,
                         "event_type": message.event_type,
                         "routing_key": message.routing_key,
+                        "aggregate_type": message.aggregate_type,
+                        "aggregate_id": message.aggregate_id,
                     },
                 )
 
@@ -147,14 +182,29 @@ class RabbitMQTopicPublisher:
         self._exchange: aio_pika.abc.AbstractExchange | None = None
 
     async def publish(self, message: EventMessage) -> None:
+        if message.correlation_id is None:
+            message.correlation_id = get_correlation_id()
         exchange = await self._get_exchange()
         body = json.dumps(message.payload, ensure_ascii=False).encode("utf-8")
+        log_event(
+            "event published",
+            correlation_id=message.correlation_id,
+            event_type=message.event_type,
+            routing_key=message.routing_key,
+            aggregate_type=message.aggregate_type,
+            aggregate_id=message.aggregate_id,
+        )
         await exchange.publish(
             aio_pika.Message(
                 body=body,
                 content_type="application/json",
                 delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
                 type=message.event_type,
+                correlation_id=message.correlation_id,
+                headers={
+                    "aggregate_type": message.aggregate_type,
+                    "aggregate_id": message.aggregate_id,
+                },
             ),
             routing_key=message.routing_key,
         )
@@ -217,21 +267,37 @@ class RabbitMQTopicSubscriber:
                 continue
 
             payload = json.loads(incoming_message.body.decode("utf-8"))
+            headers = incoming_message.headers or {}
             message = EventMessage(
                 event_type=incoming_message.type or payload["eventType"],
                 routing_key=incoming_message.routing_key or "",
                 payload=payload,
+                correlation_id=incoming_message.correlation_id,
+                aggregate_type=_header_as_str(headers.get("aggregate_type")),
+                aggregate_id=_header_as_int(headers.get("aggregate_id")),
             )
             try:
                 await handler(message)
             except Exception:
                 self.failed_messages.append(message)
+                log_event(
+                    "event handler failed",
+                    correlation_id=message.correlation_id,
+                    event_type=message.event_type,
+                    routing_key=message.routing_key,
+                    aggregate_type=message.aggregate_type,
+                    aggregate_id=message.aggregate_id,
+                    queue_name=self.queue_name,
+                )
                 LOGGER.exception(
                     "RabbitMQ event handler failed",
                     extra={
+                        "correlation_id": message.correlation_id,
                         "queue_name": self.queue_name,
                         "event_type": message.event_type,
                         "routing_key": message.routing_key,
+                        "aggregate_type": message.aggregate_type,
+                        "aggregate_id": message.aggregate_id,
                     },
                 )
                 await incoming_message.nack(requeue=True)
@@ -296,11 +362,18 @@ class BackgroundEventConsumer:
         self._stop_event.set()
 
     async def _handle_message(self, message: EventMessage) -> None:
-        self._logger.info(
-            "Handling event",
-            extra={
-                "event_type": message.event_type,
-                "routing_key": message.routing_key,
-            },
-        )
-        await self.handler(message)
+        token = set_correlation_id(message.correlation_id)
+        try:
+            self._logger.info(
+                "handling event",
+                extra={
+                    "correlation_id": message.correlation_id,
+                    "event_type": message.event_type,
+                    "routing_key": message.routing_key,
+                    "aggregate_type": message.aggregate_type,
+                    "aggregate_id": message.aggregate_id,
+                },
+            )
+            await self.handler(message)
+        finally:
+            reset_correlation_id(token)

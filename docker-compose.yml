@@ -74,6 +74,8 @@ services:
       PORT: 8081
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/account_db
       INTERNAL_API_KEY: local-internal-api-key
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       ELASTICSEARCH_URL: http://elasticsearch:9200
     ports:
@@ -101,6 +103,8 @@ services:
       PORT: 8082
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/hospital_db
       INTERNAL_API_KEY: local-internal-api-key
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       ELASTICSEARCH_URL: http://elasticsearch:9200
     ports:
@@ -128,6 +132,8 @@ services:
       PORT: 8083
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/timetable_db
       INTERNAL_API_KEY: local-internal-api-key
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
       ACCOUNT_SERVICE_URL: http://account-service:8081
       HOSPITAL_SERVICE_URL: http://hospital-service:8082
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
@@ -157,6 +163,8 @@ services:
       PORT: 8084
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/document_db
       INTERNAL_API_KEY: local-internal-api-key
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
       ACCOUNT_SERVICE_URL: http://account-service:8081
       HOSPITAL_SERVICE_URL: http://hospital-service:8082
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/

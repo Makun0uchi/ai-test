@@ -54,4 +54,7 @@ class AccountOutboxDispatcher:
             event_type=event.event_type,
             routing_key=event.routing_key,
             payload=json.loads(event.payload),
+            correlation_id=event.correlation_id,
+            aggregate_type="account",
+            aggregate_id=event.account_id,
         )

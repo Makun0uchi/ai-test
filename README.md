@@ -34,6 +34,19 @@ Current implementation progress:
 2. Kibana URL: http://localhost:5601/
 3. Logstash TCP input: localhost:5000
 
+Structured log fields:
+- `service`
+- `correlation_id`
+- `http_method`
+- `http_path`
+- `status_code`
+- `duration_ms`
+- `event_type`
+- `routing_key`
+- `aggregate_type`
+- `aggregate_id`
+- `queue_name`
+
 ## Stack
 
 - Python 3.11
@@ -98,6 +111,7 @@ L- .github/workflows/
 - `timetable-service` consumes `hospital.deleted.v1` from RabbitMQ and cleans up related timetables asynchronously.
 - Shared RabbitMQ payload schemas live in `libs/contracts` and are verified by contract tests.
 - Shared publisher and subscriber primitives live in `libs/service_common.messaging`.
+- Every service accepts and returns `X-Correlation-ID`, forwards it through internal HTTP validation, and preserves it in outbox-driven event publication.
 - Internal service-to-service contracts are protected with `X-Internal-Token`.
 
 ## Versioning and releases

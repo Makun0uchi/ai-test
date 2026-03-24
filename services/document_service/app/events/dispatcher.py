@@ -54,4 +54,7 @@ class HistoryOutboxDispatcher:
             event_type=event.event_type,
             routing_key=event.routing_key,
             payload=json.loads(event.payload),
+            correlation_id=event.correlation_id,
+            aggregate_type="history",
+            aggregate_id=event.history_id,
         )

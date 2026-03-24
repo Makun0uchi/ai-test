@@ -4,6 +4,7 @@ from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
+from libs.service_common.logging import CORRELATION_ID_HEADER
 
 from services.account_service.app.core.config import Settings
 from services.account_service.app.events.publisher import InMemoryAccountEventPublisher
@@ -199,6 +200,27 @@ def test_internal_account_reference_requires_valid_internal_token(client: TestCl
     response = client.get("/internal/accounts/4", headers=_internal_headers(settings))
     assert response.status_code == 200
     assert response.json() == {"id": 4, "username": "user", "roles": ["User"]}
+
+
+def test_correlation_id_is_echoed_and_persisted_in_account_events(client: TestClient) -> None:
+    response = client.post(
+        "/api/Authentication/SignUp",
+        headers={CORRELATION_ID_HEADER: "corr-account-789"},
+        json={
+            "lastName": "Smirnov",
+            "firstName": "Alexey",
+            "username": "alexey.correlation",
+            "password": "strong-password",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.headers[CORRELATION_ID_HEADER] == "corr-account-789"
+
+    publisher = _event_publisher(client)
+    payloads = _wait_for_published_messages(client, expected_count=1)
+    assert len(payloads) == 1
+    assert publisher.published_messages[0].correlation_id == "corr-account-789"
 
 
 def test_account_events_are_published_via_outbox(client: TestClient) -> None:

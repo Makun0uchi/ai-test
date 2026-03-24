@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from libs.service_common.logging import get_correlation_id
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,7 @@ class TimetableOutboxRepository:
             aggregate_id=aggregate_id,
             event_type=event_type,
             routing_key=routing_key,
+            correlation_id=get_correlation_id(),
             payload=payload,
         )
         self.session.add(event)

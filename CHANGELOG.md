@@ -7,6 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-03-24
+
+### Added
+- Added request correlation ID middleware for all four services with `X-Correlation-ID` echoing and structured request completion logs.
+- Added correlation ID persistence in every outbox table and propagated correlation metadata through RabbitMQ publishers, subscribers, and background consumers.
+- Added optional Logstash TCP shipping configuration so structured service logs can be forwarded into ELK in the docker environment.
+- Added regression tests for correlation header forwarding, response header echoing, correlation-aware outbox publication, and migration coverage for the new outbox column.
+
+### Changed
+- Internal HTTP reference validation now forwards the active correlation ID to downstream internal service calls.
+- Event publication and consumption logs now include correlation ID, event type, routing key, aggregate type, aggregate ID, and queue metadata.
+
 ## [0.15.0] - 2026-03-24
 
 ### Added

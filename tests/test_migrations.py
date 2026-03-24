@@ -8,7 +8,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize(
-    ("service_dir", "expected_tables"),
+    ("service_dir", "expected_tables", "outbox_table"),
     [
         (
             "account_service",
@@ -20,18 +20,22 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
                 "account_outbox",
                 "alembic_version",
             },
+            "account_outbox",
         ),
         (
             "hospital_service",
             {"hospitals", "hospital_rooms", "hospital_outbox", "alembic_version"},
+            "hospital_outbox",
         ),
         (
             "timetable_service",
             {"timetables", "appointments", "timetable_outbox", "alembic_version"},
+            "timetable_outbox",
         ),
         (
             "document_service",
             {"history_records", "history_index_outbox", "alembic_version"},
+            "history_index_outbox",
         ),
     ],
 )
@@ -39,6 +43,7 @@ def test_initial_migrations_create_expected_tables(
     tmp_path: Path,
     service_dir: str,
     expected_tables: set[str],
+    outbox_table: str,
 ) -> None:
     database_path = tmp_path / f"{service_dir}.db"
     database_url = f"sqlite+pysqlite:///{database_path}"
@@ -51,5 +56,7 @@ def test_initial_migrations_create_expected_tables(
     try:
         inspector = sa.inspect(engine)
         assert expected_tables.issubset(set(inspector.get_table_names()))
+        outbox_columns = {column["name"] for column in inspector.get_columns(outbox_table)}
+        assert "correlation_id" in outbox_columns
     finally:
         engine.dispose()

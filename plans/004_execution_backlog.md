@@ -1,7 +1,7 @@
 # Simbir.Health Backend: execution backlog
 
 ## Current milestone baseline
-- Baseline version: `v0.15.0`
+- Baseline version: `v0.16.0`
 - Scope already done:
   - microservice CRUD and auth flows;
   - migrations;
@@ -12,7 +12,8 @@
   - async search indexing in `document-service`;
   - shared consumer infrastructure;
   - first real cross-service consumer flow: `hospital.deleted.v1 -> timetable-service` cleanup;
-  - full end-to-end patient visit workflow test across all four services.
+  - full end-to-end patient visit workflow test across all four services;
+  - correlation IDs and structured event/request logging across HTTP, outbox, and RabbitMQ flows.
 
 ## Backlog structure
 - `P0`: required before calling the project production-ready.
@@ -81,6 +82,9 @@ Acceptance:
 - stable under clean environment bootstrap.
 
 ### P0.5 Correlation IDs and structured event logging
+Status:
+- completed in `v0.16.0`
+
 Deliverables:
 - request correlation ID middleware;
 - event publication and consumption logs with correlation and aggregate metadata;

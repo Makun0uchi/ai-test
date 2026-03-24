@@ -5,6 +5,8 @@ from urllib.parse import quote
 import httpx
 from fastapi import HTTPException, status
 
+from .logging import CORRELATION_ID_HEADER, get_correlation_id
+
 
 class ReferenceValidator(Protocol):
     def ensure_account_has_role(
@@ -104,8 +106,12 @@ class HttpReferenceValidator:
         *,
         missing_detail: str,
     ) -> dict[str, Any]:
+        request_headers: dict[str, str] = {}
+        correlation_id = get_correlation_id()
+        if correlation_id:
+            request_headers[CORRELATION_ID_HEADER] = correlation_id
         try:
-            response = client.get(path)
+            response = client.get(path, headers=request_headers or None)
         except httpx.HTTPError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

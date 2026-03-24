@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     account_service_url: str = Field(default="http://localhost:8081", alias="ACCOUNT_SERVICE_URL")
     hospital_service_url: str = Field(default="http://localhost:8082", alias="HOSPITAL_SERVICE_URL")
     rabbitmq_url: str = Field(default="memory://history-events", alias="RABBITMQ_URL")
+    logstash_host: str = Field(default="", alias="LOGSTASH_HOST")
+    logstash_port: int = Field(default=5000, alias="LOGSTASH_PORT")
     history_events_exchange: str = "simbir.health.events"
     history_indexer_queue_name: str = "document-service.history-indexer.v1"
     outbox_poll_interval_seconds: float = 0.1

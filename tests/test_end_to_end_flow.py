@@ -22,8 +22,11 @@ class InternalTestClient:
         self.client = client
         self.internal_api_key = internal_api_key
 
-    def get(self, path: str) -> Any:
-        return self.client.get(path, headers={"X-Internal-Token": self.internal_api_key})
+    def get(self, path: str, headers: dict[str, str] | None = None) -> Any:
+        merged_headers = {"X-Internal-Token": self.internal_api_key}
+        if headers:
+            merged_headers.update(headers)
+        return self.client.get(path, headers=merged_headers)
 
     def close(self) -> None:
         return None

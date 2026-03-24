@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     internal_api_key: str = Field(default="local-internal-api-key", alias="INTERNAL_API_KEY")
     rabbitmq_url: str = Field(default="memory://account-events", alias="RABBITMQ_URL")
+    logstash_host: str = Field(default="", alias="LOGSTASH_HOST")
+    logstash_port: int = Field(default=5000, alias="LOGSTASH_PORT")
     account_events_exchange: str = "simbir.health.events"
     outbox_poll_interval_seconds: float = 0.1
     outbox_batch_size: int = 50

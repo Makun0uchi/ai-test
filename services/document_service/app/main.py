@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from libs.service_common.logging import configure_logging
+from libs.service_common.logging import CorrelationIdMiddleware, configure_logging
 from libs.service_common.migrations import run_database_migrations
 from libs.service_common.reference_validation import HttpReferenceValidator, ReferenceValidator
 
@@ -92,7 +92,11 @@ def create_app(
     history_event_subscriber: HistoryEventSubscriber | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
-    configure_logging(app_settings.service_name)
+    configure_logging(
+        app_settings.service_name,
+        logstash_host=app_settings.logstash_host or None,
+        logstash_port=app_settings.logstash_port,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -154,6 +158,7 @@ def create_app(
         redoc_url=None,
         lifespan=lifespan,
     )
+    app.add_middleware(CorrelationIdMiddleware)
     app.include_router(system_router)
     app.include_router(history_router)
     return app
