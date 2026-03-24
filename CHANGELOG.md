@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-24
+
+### Added
+- Added `history_index_outbox` support in `document-service` for reliable history event publication.
+- Added background outbox dispatcher and RabbitMQ publisher for `history.created.v1` and `history.updated.v1` events.
+- Added in-memory event publisher for tests and API tests covering outbox publication.
+
+### Changed
+- `document-service` now writes history records and outbox events in the same transaction.
+- Synchronous Elasticsearch indexing remains as a fallback while event-driven infrastructure is introduced incrementally.
+
 ## [0.7.0] - 2026-03-24
 
 ### Added

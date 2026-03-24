@@ -1,3 +1,4 @@
+import time
 from collections.abc import Iterator
 from datetime import datetime
 from typing import Any, cast
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 from libs.service_common.reference_validation import ReferenceValidator
 
 from services.document_service.app.core.config import Settings
+from services.document_service.app.events.publisher import InMemoryHistoryEventPublisher
 from services.document_service.app.main import create_app
 
 
@@ -60,6 +62,8 @@ def client(tmp_path) -> Iterator[TestClient]:
         DATABASE_URL=f"sqlite+pysqlite:///{tmp_path / 'document-service.db'}",
         JWT_SECRET_KEY="test-secret-key",
         ELASTICSEARCH_URL="memory://history-tests",
+        RABBITMQ_URL="memory://history-events-tests",
+        outbox_poll_interval_seconds=0.01,
     )
 
     with TestClient(
@@ -94,11 +98,32 @@ def _create_settings(tmp_path, elasticsearch_url: str = "memory://history-tests"
         DATABASE_URL=f"sqlite+pysqlite:///{tmp_path / 'document-service.db'}",
         JWT_SECRET_KEY="test-secret-key",
         ELASTICSEARCH_URL=elasticsearch_url,
+        RABBITMQ_URL="memory://history-events-tests",
+        outbox_poll_interval_seconds=0.01,
     )
 
 
 def _dt(value: str) -> str:
     return datetime.fromisoformat(value).isoformat()
+
+
+def _event_publisher(client: TestClient) -> InMemoryHistoryEventPublisher:
+    return cast(InMemoryHistoryEventPublisher, cast(Any, client.app).state.history_event_publisher)
+
+
+def _wait_for_published_messages(
+    client: TestClient,
+    *,
+    expected_count: int,
+    timeout_seconds: float = 1.0,
+) -> list[dict[str, Any]]:
+    deadline = time.time() + timeout_seconds
+    publisher = _event_publisher(client)
+    while time.time() < deadline:
+        if len(publisher.published_messages) >= expected_count:
+            return [message.payload for message in publisher.published_messages]
+        time.sleep(0.02)
+    return [message.payload for message in publisher.published_messages]
 
 
 def test_health_endpoint_exposes_service_metadata(client: TestClient) -> None:
@@ -373,3 +398,44 @@ def test_search_index_is_restored_from_database_on_startup(tmp_path) -> None:
     payload = search_response.json()
     assert payload["total"] == 1
     assert payload["items"][0]["pacientId"] == 41
+
+
+def test_history_events_are_published_via_outbox(client: TestClient) -> None:
+    settings = _settings(client)
+
+    create_response = client.post(
+        "/api/History",
+        headers=_headers(settings, ["Doctor"], subject=7),
+        json={
+            "date": _dt("2026-03-24T17:00:00"),
+            "pacientId": 11,
+            "hospitalId": 2,
+            "doctorId": 7,
+            "room": "201",
+            "data": "РџРѕРІС‚РѕСЂРЅС‹Р№ РѕСЃРјРѕС‚СЂ",
+        },
+    )
+    history_id = create_response.json()["id"]
+
+    update_response = client.put(
+        f"/api/History/{history_id}",
+        headers=_headers(settings, ["Doctor"], subject=7),
+        json={
+            "date": _dt("2026-03-24T17:30:00"),
+            "pacientId": 11,
+            "hospitalId": 2,
+            "doctorId": 7,
+            "room": "201",
+            "data": "РџРѕРІС‚РѕСЂРЅС‹Р№ РѕСЃРјРѕС‚СЂ СЃ РѕР±РЅРѕРІР»РµРЅРёРµРј",
+        },
+    )
+
+    assert create_response.status_code == 201
+    assert update_response.status_code == 200
+
+    payloads = _wait_for_published_messages(client, expected_count=2)
+    assert len(payloads) == 2
+    assert payloads[0]["eventType"] == "history.created.v1"
+    assert payloads[0]["historyId"] == history_id
+    assert payloads[1]["eventType"] == "history.updated.v1"
+    assert payloads[1]["historyId"] == history_id

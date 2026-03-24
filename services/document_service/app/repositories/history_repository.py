@@ -1,12 +1,17 @@
-﻿from sqlalchemy import select
+import json
+from datetime import datetime
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models.history import HistoryRecord
+from ..repositories.outbox_repository import HistoryOutboxRepository
 
 
 class HistoryRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
+        self.outbox_repository = HistoryOutboxRepository(session)
 
     def list_all(self) -> list[HistoryRecord]:
         statement = select(HistoryRecord).order_by(HistoryRecord.date.desc())
@@ -27,12 +32,14 @@ class HistoryRepository:
     def create_history(
         self,
         *,
-        date,
+        date: datetime,
         patient_id: int,
         hospital_id: int,
         doctor_id: int,
         room: str,
         data: str,
+        event_type: str,
+        routing_key: str,
     ) -> HistoryRecord:
         history = HistoryRecord(
             date=date,
@@ -43,6 +50,13 @@ class HistoryRepository:
             data=data,
         )
         self.session.add(history)
+        self.session.flush()
+        self.outbox_repository.create_event(
+            history_id=history.id,
+            event_type=event_type,
+            routing_key=routing_key,
+            payload=self._serialize_payload(history, event_type),
+        )
         self.session.commit()
         self.session.refresh(history)
         return history
@@ -51,12 +65,14 @@ class HistoryRepository:
         self,
         history: HistoryRecord,
         *,
-        date,
+        date: datetime,
         patient_id: int,
         hospital_id: int,
         doctor_id: int,
         room: str,
         data: str,
+        event_type: str,
+        routing_key: str,
     ) -> HistoryRecord:
         history.date = date
         history.patient_id = patient_id
@@ -65,6 +81,29 @@ class HistoryRepository:
         history.room = room
         history.data = data
         self.session.add(history)
+        self.session.flush()
+        self.outbox_repository.create_event(
+            history_id=history.id,
+            event_type=event_type,
+            routing_key=routing_key,
+            payload=self._serialize_payload(history, event_type),
+        )
         self.session.commit()
         self.session.refresh(history)
         return history
+
+    def _serialize_payload(self, history: HistoryRecord, event_type: str) -> str:
+        payload = {
+            "eventType": event_type,
+            "historyId": history.id,
+            "history": {
+                "id": history.id,
+                "date": history.date.isoformat(),
+                "patientId": history.patient_id,
+                "hospitalId": history.hospital_id,
+                "doctorId": history.doctor_id,
+                "room": history.room,
+                "data": history.data,
+            },
+        }
+        return json.dumps(payload, ensure_ascii=False)

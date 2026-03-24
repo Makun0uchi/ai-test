@@ -16,7 +16,10 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
         ),
         ("hospital_service", {"hospitals", "hospital_rooms", "alembic_version"}),
         ("timetable_service", {"timetables", "appointments", "alembic_version"}),
-        ("document_service", {"history_records", "alembic_version"}),
+        (
+            "document_service",
+            {"history_records", "history_index_outbox", "alembic_version"},
+        ),
     ],
 )
 def test_initial_migrations_create_expected_tables(

@@ -23,5 +23,10 @@ class Settings(BaseSettings):
     internal_api_key: str = Field(default="local-internal-api-key", alias="INTERNAL_API_KEY")
     account_service_url: str = Field(default="http://localhost:8081", alias="ACCOUNT_SERVICE_URL")
     hospital_service_url: str = Field(default="http://localhost:8082", alias="HOSPITAL_SERVICE_URL")
+    rabbitmq_url: str = Field(default="memory://history-events", alias="RABBITMQ_URL")
+    history_events_exchange: str = "simbir.health.events"
+    history_event_routing_key: str = "history.changed.v1"
+    outbox_poll_interval_seconds: float = 0.1
+    outbox_batch_size: int = 50
     elasticsearch_url: str = Field(default="memory://history", alias="ELASTICSEARCH_URL")
     search_index_name: str = "history-records-v1"

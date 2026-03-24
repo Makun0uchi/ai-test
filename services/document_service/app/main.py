@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -8,6 +9,12 @@ from libs.service_common.reference_validation import HttpReferenceValidator, Ref
 
 from .core.config import Settings
 from .core.database import DatabaseManager
+from .events.dispatcher import HistoryOutboxDispatcher
+from .events.publisher import (
+    HistoryEventPublisher,
+    InMemoryHistoryEventPublisher,
+    RabbitMQHistoryEventPublisher,
+)
 from .repositories.history_repository import HistoryRepository
 from .routers.history import router as history_router
 from .routers.system import router as system_router
@@ -32,6 +39,15 @@ def create_reference_validator(settings: Settings) -> ReferenceValidator:
     )
 
 
+def create_history_event_publisher(settings: Settings) -> HistoryEventPublisher:
+    if settings.rabbitmq_url.startswith("memory://"):
+        return InMemoryHistoryEventPublisher()
+    return RabbitMQHistoryEventPublisher(
+        url=settings.rabbitmq_url,
+        exchange_name=settings.history_events_exchange,
+    )
+
+
 def sync_search_index(database_manager: DatabaseManager, search_gateway: SearchGateway) -> None:
     session = next(database_manager.get_session())
     try:
@@ -45,6 +61,7 @@ def sync_search_index(database_manager: DatabaseManager, search_gateway: SearchG
 def create_app(
     settings: Settings | None = None,
     reference_validator: ReferenceValidator | None = None,
+    history_event_publisher: HistoryEventPublisher | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
     configure_logging(app_settings.service_name)
@@ -59,14 +76,29 @@ def create_app(
         search_gateway = create_search_gateway(app_settings)
         search_gateway.setup()
         app_reference_validator = reference_validator or create_reference_validator(app_settings)
+        app_history_event_publisher = history_event_publisher or create_history_event_publisher(
+            app_settings
+        )
+        outbox_dispatcher = HistoryOutboxDispatcher(
+            database_manager=database_manager,
+            publisher=app_history_event_publisher,
+            poll_interval_seconds=app_settings.outbox_poll_interval_seconds,
+            batch_size=app_settings.outbox_batch_size,
+        )
+        outbox_task = asyncio.create_task(outbox_dispatcher.run_forever())
         sync_search_index(database_manager, search_gateway)
 
         app.state.settings = app_settings
         app.state.database_manager = database_manager
         app.state.search_gateway = search_gateway
         app.state.reference_validator = app_reference_validator
+        app.state.history_event_publisher = app_history_event_publisher
+        app.state.outbox_dispatcher = outbox_dispatcher
 
         yield
+        outbox_dispatcher.stop()
+        await outbox_task
+        await app_history_event_publisher.close()
         app_reference_validator.close()
         database_manager.dispose()
 
