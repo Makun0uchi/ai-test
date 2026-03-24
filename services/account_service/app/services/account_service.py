@@ -13,6 +13,10 @@ from ..schemas.internal import InternalAccountResponse
 
 
 class AccountService:
+    CREATED_EVENT_TYPE = "account.created.v1"
+    UPDATED_EVENT_TYPE = "account.updated.v1"
+    DELETED_EVENT_TYPE = "account.deleted.v1"
+
     def __init__(self, repository: AccountRepository) -> None:
         self.repository = repository
 
@@ -26,6 +30,8 @@ class AccountService:
             last_name=payload.last_name,
             first_name=payload.first_name,
             password_hash=password_hash,
+            event_type=self.UPDATED_EVENT_TYPE,
+            routing_key=self.UPDATED_EVENT_TYPE,
         )
         return self._to_response(updated)
 
@@ -55,6 +61,8 @@ class AccountService:
             username=payload.username,
             password_hash=hash_password(payload.password),
             roles=roles,
+            event_type=self.CREATED_EVENT_TYPE,
+            routing_key=self.CREATED_EVENT_TYPE,
         )
         return self._to_response(account)
 
@@ -78,12 +86,18 @@ class AccountService:
             username=payload.username,
             password_hash=password_hash,
             roles=roles,
+            event_type=self.UPDATED_EVENT_TYPE,
+            routing_key=self.UPDATED_EVENT_TYPE,
         )
         return self._to_response(updated)
 
     def delete_account(self, account_id: int) -> None:
         account = self._require_account(account_id)
-        self.repository.delete_account(account)
+        self.repository.delete_account(
+            account,
+            event_type=self.DELETED_EVENT_TYPE,
+            routing_key=self.DELETED_EVENT_TYPE,
+        )
 
     def seed_defaults(self) -> None:
         default_accounts = [

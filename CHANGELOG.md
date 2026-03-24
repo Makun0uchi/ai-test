@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-24
+
+### Added
+- Added outbox-based domain event publication to `account-service`.
+- Added RabbitMQ publisher and background dispatcher for account lifecycle events.
+- Added API tests covering event publication for sign-up, self-update, and admin account CRUD flows.
+
+### Changed
+- `account-service` now writes account mutations and outbox events in the same transaction while keeping seed users event-free.
+
 ## [0.11.0] - 2026-03-24
 
 ### Added

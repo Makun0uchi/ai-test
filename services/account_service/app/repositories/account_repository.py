@@ -1,14 +1,17 @@
+import json
 from datetime import datetime
 
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from ..models.account import Account, RefreshToken, Role
+from .outbox_repository import AccountOutboxRepository
 
 
 class AccountRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
+        self.outbox_repository = AccountOutboxRepository(session)
 
     def get_account_by_id(self, account_id: int) -> Account | None:
         statement = (
@@ -40,6 +43,8 @@ class AccountRepository:
         username: str,
         password_hash: str,
         roles: list[Role],
+        event_type: str | None = None,
+        routing_key: str | None = None,
     ) -> Account:
         account = Account(
             last_name=last_name,
@@ -49,6 +54,14 @@ class AccountRepository:
             roles=roles,
         )
         self.session.add(account)
+        self.session.flush()
+        if event_type is not None and routing_key is not None:
+            self.outbox_repository.create_event(
+                account_id=account.id,
+                event_type=event_type,
+                routing_key=routing_key,
+                payload=self._serialize_account_payload(account, event_type),
+            )
         self.session.commit()
         self.session.refresh(account)
         return self.get_account_by_id(account.id) or account
@@ -62,6 +75,8 @@ class AccountRepository:
         username: str | None = None,
         password_hash: str | None = None,
         roles: list[Role] | None = None,
+        event_type: str | None = None,
+        routing_key: str | None = None,
     ) -> Account:
         account.last_name = last_name
         account.first_name = first_name
@@ -72,11 +87,32 @@ class AccountRepository:
         if roles is not None:
             account.roles = roles
         self.session.add(account)
+        self.session.flush()
+        if event_type is not None and routing_key is not None:
+            self.outbox_repository.create_event(
+                account_id=account.id,
+                event_type=event_type,
+                routing_key=routing_key,
+                payload=self._serialize_account_payload(account, event_type),
+            )
         self.session.commit()
         self.session.refresh(account)
         return self.get_account_by_id(account.id) or account
 
-    def delete_account(self, account: Account) -> None:
+    def delete_account(
+        self,
+        account: Account,
+        *,
+        event_type: str | None = None,
+        routing_key: str | None = None,
+    ) -> None:
+        if event_type is not None and routing_key is not None:
+            self.outbox_repository.create_event(
+                account_id=account.id,
+                event_type=event_type,
+                routing_key=routing_key,
+                payload=self._serialize_account_payload(account, event_type),
+            )
         self.session.delete(account)
         self.session.commit()
 
@@ -165,3 +201,17 @@ class AccountRepository:
         self.session.execute(delete(Account))
         self.session.execute(delete(Role))
         self.session.commit()
+
+    def _serialize_account_payload(self, account: Account, event_type: str) -> str:
+        payload = {
+            "eventType": event_type,
+            "accountId": account.id,
+            "account": {
+                "id": account.id,
+                "lastName": account.last_name,
+                "firstName": account.first_name,
+                "username": account.username,
+                "roles": sorted(role.name for role in account.roles),
+            },
+        }
+        return json.dumps(payload, ensure_ascii=False)

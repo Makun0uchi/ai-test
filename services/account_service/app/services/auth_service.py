@@ -21,6 +21,8 @@ from ..schemas.auth import (
 
 
 class AuthService:
+    CREATED_EVENT_TYPE = "account.created.v1"
+
     def __init__(self, repository: AccountRepository) -> None:
         self.repository = repository
 
@@ -37,6 +39,8 @@ class AuthService:
             username=payload.username,
             password_hash=hash_password(payload.password),
             roles=[user_role],
+            event_type=self.CREATED_EVENT_TYPE,
+            routing_key=self.CREATED_EVENT_TYPE,
         )
         return self._issue_tokens(account, settings)
 

@@ -14,7 +14,7 @@ The repository currently contains the bootstrap for the target microservice plat
 - planning documents for the next implementation phases.
 
 Current implementation progress:
-- `account-service`: implemented with JWT auth, seeded users, account CRUD, and doctor directory.
+- `account-service`: implemented with JWT auth, seeded users, account CRUD, doctor directory, and RabbitMQ outbox publication.
 - `hospital-service`: implemented with hospital CRUD, room management, and RabbitMQ outbox publication.
 - `timetable-service`: implemented with schedule CRUD, slot generation, appointment booking, cross-service reference validation, and RabbitMQ outbox publication.
 - `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, cross-service reference validation, RabbitMQ outbox publication, and asynchronous search indexing consumer.
@@ -86,6 +86,7 @@ L- .github/workflows/
 ## Service interaction
 
 - `timetable-service` validates doctors through `account-service` and validates hospitals and rooms through `hospital-service`.
+- `account-service` publishes `account.created.v1`, `account.updated.v1`, and `account.deleted.v1` through RabbitMQ using an outbox table.
 - `timetable-service` publishes `timetable.created.v1`, `timetable.updated.v1`, `timetable.deleted.v1`, `appointment.created.v1`, and `appointment.deleted.v1` through RabbitMQ using an outbox table.
 - `document-service` validates patients and doctors through `account-service` and validates hospitals and rooms through `hospital-service`.
 - `hospital-service` publishes `hospital.created.v1`, `hospital.updated.v1`, and `hospital.deleted.v1` through RabbitMQ using an outbox table.

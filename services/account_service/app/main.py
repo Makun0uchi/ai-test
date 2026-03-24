@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,6 +8,12 @@ from libs.service_common.migrations import run_database_migrations
 
 from .core.config import Settings
 from .core.database import DatabaseManager
+from .events.dispatcher import AccountOutboxDispatcher
+from .events.publisher import (
+    AccountEventPublisher,
+    InMemoryAccountEventPublisher,
+    RabbitMQAccountEventPublisher,
+)
 from .repositories.account_repository import AccountRepository
 from .routers.accounts import router as accounts_router
 from .routers.authentication import router as authentication_router
@@ -18,7 +25,19 @@ from .services.account_service import AccountService
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_account_event_publisher(settings: Settings) -> AccountEventPublisher:
+    if settings.rabbitmq_url.startswith("memory://"):
+        return InMemoryAccountEventPublisher()
+    return RabbitMQAccountEventPublisher(
+        url=settings.rabbitmq_url,
+        exchange_name=settings.account_events_exchange,
+    )
+
+
+def create_app(
+    settings: Settings | None = None,
+    account_event_publisher: AccountEventPublisher | None = None,
+) -> FastAPI:
     app_settings = settings or Settings()
     configure_logging(app_settings.service_name)
 
@@ -29,9 +48,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             database_url=app_settings.database_url,
         )
         database_manager = DatabaseManager(app_settings.database_url)
-
-        app.state.settings = app_settings
-        app.state.database_manager = database_manager
+        app_account_event_publisher = account_event_publisher or create_account_event_publisher(
+            app_settings
+        )
 
         session = database_manager.session_factory()
         try:
@@ -39,7 +58,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             session.close()
 
+        outbox_dispatcher = AccountOutboxDispatcher(
+            database_manager=database_manager,
+            publisher=app_account_event_publisher,
+            poll_interval_seconds=app_settings.outbox_poll_interval_seconds,
+            batch_size=app_settings.outbox_batch_size,
+        )
+        outbox_task = asyncio.create_task(outbox_dispatcher.run_forever())
+
+        app.state.settings = app_settings
+        app.state.database_manager = database_manager
+        app.state.account_event_publisher = app_account_event_publisher
+        app.state.outbox_dispatcher = outbox_dispatcher
+
         yield
+        outbox_dispatcher.stop()
+        await outbox_task
+        await app_account_event_publisher.close()
         database_manager.dispose()
 
     app = FastAPI(

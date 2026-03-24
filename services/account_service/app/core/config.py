@@ -21,5 +21,9 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="local-account-service-secret", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"
     internal_api_key: str = Field(default="local-internal-api-key", alias="INTERNAL_API_KEY")
+    rabbitmq_url: str = Field(default="memory://account-events", alias="RABBITMQ_URL")
+    account_events_exchange: str = "simbir.health.events"
+    outbox_poll_interval_seconds: float = 0.1
+    outbox_batch_size: int = 50
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 14
