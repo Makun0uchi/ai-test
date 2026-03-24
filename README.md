@@ -17,7 +17,7 @@ Current implementation progress:
 - `account-service`: implemented with JWT auth, seeded users, account CRUD, and doctor directory.
 - `hospital-service`: implemented with hospital CRUD and room management.
 - `timetable-service`: implemented with schedule CRUD, slot generation, appointment booking, and cross-service reference validation.
-- `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, cross-service reference validation, and RabbitMQ outbox publication.
+- `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, cross-service reference validation, RabbitMQ outbox publication, and asynchronous search indexing consumer.
 
 ## Services
 
@@ -88,6 +88,7 @@ L- .github/workflows/
 - `timetable-service` validates doctors through `account-service` and validates hospitals and rooms through `hospital-service`.
 - `document-service` validates patients and doctors through `account-service` and validates hospitals and rooms through `hospital-service`.
 - `document-service` publishes `history.created.v1` and `history.updated.v1` through RabbitMQ using an outbox table.
+- `document-service` consumes its history events from RabbitMQ and updates the Elasticsearch search index asynchronously.
 - Internal service-to-service contracts are protected with `X-Internal-Token`.
 
 ## Versioning and releases

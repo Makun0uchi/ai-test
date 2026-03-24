@@ -19,12 +19,10 @@ class HistoryService:
         repository: HistoryRepository,
         search_gateway: SearchGateway,
         reference_validator: ReferenceValidator,
-        history_event_routing_key: str,
     ) -> None:
         self.repository = repository
         self.search_gateway = search_gateway
         self.reference_validator = reference_validator
-        self.history_event_routing_key = history_event_routing_key
 
     def list_by_patient(self, patient_id: int, principal: AuthContext) -> list[HistoryResponse]:
         self._ensure_history_access(patient_id, principal)
@@ -47,9 +45,8 @@ class HistoryService:
             room=payload.room,
             data=payload.data,
             event_type=self.CREATED_EVENT_TYPE,
-            routing_key=self.history_event_routing_key,
+            routing_key=self.CREATED_EVENT_TYPE,
         )
-        self.search_gateway.index_history(history)
         return self._to_response(history)
 
     def update_history(
@@ -67,9 +64,8 @@ class HistoryService:
             room=payload.room,
             data=payload.data,
             event_type=self.UPDATED_EVENT_TYPE,
-            routing_key=self.history_event_routing_key,
+            routing_key=self.UPDATED_EVENT_TYPE,
         )
-        self.search_gateway.index_history(updated)
         return self._to_response(updated)
 
     def search(

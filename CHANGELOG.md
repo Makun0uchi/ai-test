@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-24
+
+### Added
+- Added a background RabbitMQ subscriber in `document-service` to consume `history.created.v1` and `history.updated.v1` events.
+- Added a search indexer worker that rebuilds Elasticsearch documents from published history events.
+
+### Changed
+- `document-service` now uses versioned routing keys per history event instead of a shared `history.changed.v1` key.
+- Search indexing is no longer performed inside the history write path and now runs through the outbox and message consumer pipeline.
+
 ## [0.8.0] - 2026-03-24
 
 ### Added

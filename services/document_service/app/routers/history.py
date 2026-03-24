@@ -4,13 +4,11 @@ from fastapi import APIRouter, Depends, Query, status
 from libs.service_common.reference_validation import ReferenceValidator
 from sqlalchemy.orm import Session
 
-from ..core.config import Settings
 from ..core.dependencies import (
     get_current_principal,
     get_reference_validator,
     get_search_gateway,
     get_session,
-    get_settings,
 )
 from ..core.security import AuthContext
 from ..repositories.history_repository import HistoryRepository
@@ -25,14 +23,8 @@ def _service(
     session: Session,
     search_gateway: SearchGateway,
     reference_validator: ReferenceValidator,
-    settings: Settings,
 ) -> HistoryService:
-    return HistoryService(
-        HistoryRepository(session),
-        search_gateway,
-        reference_validator,
-        settings.history_event_routing_key,
-    )
+    return HistoryService(HistoryRepository(session), search_gateway, reference_validator)
 
 
 @router.get("/Search", response_model=HistorySearchResponse)
@@ -41,7 +33,6 @@ def search_history(
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
     reference_validator: ReferenceValidator = Depends(get_reference_validator),
-    settings: Settings = Depends(get_settings),
     query: str | None = Query(default=None),
     patient_id: int | None = Query(default=None, alias="patientId"),
     doctor_id: int | None = Query(default=None, alias="doctorId"),
@@ -52,7 +43,7 @@ def search_history(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
 ) -> HistorySearchResponse:
-    return _service(session, search_gateway, reference_validator, settings).search(
+    return _service(session, search_gateway, reference_validator).search(
         principal=principal,
         query=query,
         patient_id=patient_id,
@@ -73,9 +64,8 @@ def list_patient_history(
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
     reference_validator: ReferenceValidator = Depends(get_reference_validator),
-    settings: Settings = Depends(get_settings),
 ) -> list[HistoryResponse]:
-    return _service(session, search_gateway, reference_validator, settings).list_by_patient(
+    return _service(session, search_gateway, reference_validator).list_by_patient(
         patient_id, principal
     )
 
@@ -87,11 +77,8 @@ def get_history(
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
     reference_validator: ReferenceValidator = Depends(get_reference_validator),
-    settings: Settings = Depends(get_settings),
 ) -> HistoryResponse:
-    return _service(session, search_gateway, reference_validator, settings).get_history(
-        history_id, principal
-    )
+    return _service(session, search_gateway, reference_validator).get_history(history_id, principal)
 
 
 @router.post("", response_model=HistoryResponse, status_code=status.HTTP_201_CREATED)
@@ -101,11 +88,8 @@ def create_history(
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
     reference_validator: ReferenceValidator = Depends(get_reference_validator),
-    settings: Settings = Depends(get_settings),
 ) -> HistoryResponse:
-    return _service(session, search_gateway, reference_validator, settings).create_history(
-        payload, principal
-    )
+    return _service(session, search_gateway, reference_validator).create_history(payload, principal)
 
 
 @router.put("/{history_id}", response_model=HistoryResponse)
@@ -116,8 +100,7 @@ def update_history(
     session: Session = Depends(get_session),
     search_gateway: SearchGateway = Depends(get_search_gateway),
     reference_validator: ReferenceValidator = Depends(get_reference_validator),
-    settings: Settings = Depends(get_settings),
 ) -> HistoryResponse:
-    return _service(session, search_gateway, reference_validator, settings).update_history(
+    return _service(session, search_gateway, reference_validator).update_history(
         history_id, payload, principal
     )
