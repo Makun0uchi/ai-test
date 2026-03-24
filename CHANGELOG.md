@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-03-24
+
+### Added
+- Added shared RabbitMQ consumer infrastructure in `libs/service_common.messaging`, including in-memory topic subscriptions, generic RabbitMQ topic subscribers, typed payload parsing, and background consumer helpers.
+- Added a real cross-service consumer flow where `timetable-service` consumes `hospital.deleted.v1` and asynchronously removes related timetables.
+- Added consumer tests covering message filtering, failure tracking, and the end-to-end `hospital-service -> RabbitMQ -> timetable-service` cleanup flow.
+
+### Changed
+- Refactored account, hospital, timetable, and document event publishers to use the shared messaging layer instead of service-local RabbitMQ adapter implementations.
+- Refactored `document-service` history indexer to run through the shared consumer infrastructure and typed event parsing helpers.
+
 ## [0.13.1] - 2026-03-24
 
 ### Added

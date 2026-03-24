@@ -1,4 +1,5 @@
 from .dispatcher import TimetableOutboxDispatcher
+from .hospital_cleanup import HospitalDeletedTimetableCleanupConsumer
 from .publisher import (
     InMemoryTimetableEventPublisher,
     RabbitMQTimetableEventPublisher,
@@ -8,6 +9,7 @@ from .publisher import (
 
 __all__ = [
     "InMemoryTimetableEventPublisher",
+    "HospitalDeletedTimetableCleanupConsumer",
     "RabbitMQTimetableEventPublisher",
     "TimetableEventMessage",
     "TimetableEventPublisher",

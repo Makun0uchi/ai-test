@@ -4,11 +4,13 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from libs.service_common.logging import configure_logging
+from libs.service_common.messaging import EventSubscriber
 from libs.service_common.migrations import run_database_migrations
 from libs.service_common.reference_validation import HttpReferenceValidator, ReferenceValidator
 
 from .core.config import Settings
 from .core.database import DatabaseManager
+from .events import HospitalDeletedTimetableCleanupConsumer
 from .events.dispatcher import TimetableOutboxDispatcher
 from .events.publisher import (
     InMemoryTimetableEventPublisher,
@@ -39,10 +41,32 @@ def create_timetable_event_publisher(settings: Settings) -> TimetableEventPublis
     )
 
 
+def create_hospital_event_subscriber(
+    settings: Settings,
+    timetable_event_publisher: TimetableEventPublisher,
+) -> EventSubscriber:
+    if settings.rabbitmq_url.startswith("memory://") and isinstance(
+        timetable_event_publisher, InMemoryTimetableEventPublisher
+    ):
+        return timetable_event_publisher.create_subscriber(
+            queue_name=settings.hospital_cleanup_queue_name,
+            routing_keys=("hospital.deleted.v1",),
+        )
+    from libs.service_common.messaging import RabbitMQTopicSubscriber
+
+    return RabbitMQTopicSubscriber(
+        url=settings.rabbitmq_url,
+        exchange_name=settings.timetable_events_exchange,
+        queue_name=settings.hospital_cleanup_queue_name,
+        routing_keys=("hospital.deleted.v1",),
+    )
+
+
 def create_app(
     settings: Settings | None = None,
     reference_validator: ReferenceValidator | None = None,
     timetable_event_publisher: TimetableEventPublisher | None = None,
+    hospital_event_subscriber: EventSubscriber | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
     configure_logging(app_settings.service_name)
@@ -58,23 +82,40 @@ def create_app(
         app_timetable_event_publisher = (
             timetable_event_publisher or create_timetable_event_publisher(app_settings)
         )
+        app_hospital_event_subscriber = (
+            hospital_event_subscriber
+            or create_hospital_event_subscriber(
+                app_settings,
+                app_timetable_event_publisher,
+            )
+        )
         outbox_dispatcher = TimetableOutboxDispatcher(
             database_manager=database_manager,
             publisher=app_timetable_event_publisher,
             poll_interval_seconds=app_settings.outbox_poll_interval_seconds,
             batch_size=app_settings.outbox_batch_size,
         )
+        hospital_cleanup_consumer = HospitalDeletedTimetableCleanupConsumer(
+            database_manager=database_manager,
+            subscriber=app_hospital_event_subscriber,
+        )
+        await hospital_cleanup_consumer.prepare()
         outbox_task = asyncio.create_task(outbox_dispatcher.run_forever())
+        hospital_cleanup_task = asyncio.create_task(hospital_cleanup_consumer.run_forever())
 
         app.state.settings = app_settings
         app.state.database_manager = database_manager
         app.state.reference_validator = app_reference_validator
         app.state.timetable_event_publisher = app_timetable_event_publisher
+        app.state.hospital_event_subscriber = app_hospital_event_subscriber
         app.state.outbox_dispatcher = outbox_dispatcher
+        app.state.hospital_cleanup_consumer = hospital_cleanup_consumer
 
         yield
+        hospital_cleanup_consumer.stop()
         outbox_dispatcher.stop()
-        await outbox_task
+        await asyncio.gather(hospital_cleanup_task, outbox_task)
+        await app_hospital_event_subscriber.close()
         await app_timetable_event_publisher.close()
         app_reference_validator.close()
         database_manager.dispose()

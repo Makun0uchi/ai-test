@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import asyncio
-
 from libs.contracts import HistoryChangedEvent
+from libs.service_common.messaging import BackgroundEventConsumer, parse_event_payload
 
 from ..models.history import HistoryRecord
 from ..search.base import SearchGateway
@@ -18,19 +17,23 @@ class HistorySearchIndexer:
     ) -> None:
         self.search_gateway = search_gateway
         self.subscriber = subscriber
-        self._stop_event = asyncio.Event()
+        self._consumer = BackgroundEventConsumer(
+            name="document-history-indexer",
+            subscriber=subscriber,
+            handler=self._handle_message,
+        )
 
     async def prepare(self) -> None:
-        await self.subscriber.prepare()
+        await self._consumer.prepare()
 
     async def run_forever(self) -> None:
-        await self.subscriber.consume(handler=self._handle_message, stop_event=self._stop_event)
+        await self._consumer.run_forever()
 
     def stop(self) -> None:
-        self._stop_event.set()
+        self._consumer.stop()
 
     async def _handle_message(self, message: HistoryEventMessage) -> None:
-        event = HistoryChangedEvent.model_validate(message.payload)
+        event = parse_event_payload(message, HistoryChangedEvent)
         history_payload = event.history
 
         history = HistoryRecord(

@@ -25,5 +25,6 @@ class Settings(BaseSettings):
     hospital_service_url: str = Field(default="http://localhost:8082", alias="HOSPITAL_SERVICE_URL")
     rabbitmq_url: str = Field(default="memory://timetable-events", alias="RABBITMQ_URL")
     timetable_events_exchange: str = "simbir.health.events"
+    hospital_cleanup_queue_name: str = "timetable-service.hospital-cleanup.v1"
     outbox_poll_interval_seconds: float = 0.1
     outbox_batch_size: int = 50

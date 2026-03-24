@@ -9,7 +9,9 @@
   - outbox publication in all services;
   - shared event contracts;
   - contract tests;
-  - async search indexing in `document-service`.
+  - async search indexing in `document-service`;
+  - shared consumer infrastructure;
+  - first real cross-service consumer flow: `hospital.deleted.v1 -> timetable-service` cleanup.
 
 ## Backlog structure
 - `P0`: required before calling the project production-ready.
@@ -29,6 +31,9 @@ Outputs:
 - `docs/events/` if a docs folder is introduced later.
 
 ### P0.2 Shared consumer infrastructure
+Status:
+- completed in `v0.14.0`
+
 Deliverables:
 - generic consumer bootstrap helper;
 - typed parsing helper for RabbitMQ payloads;
@@ -40,12 +45,18 @@ Outputs:
 - tests for parsing and failure behavior.
 
 ### P0.3 Second real consumer flow
+Status:
+- completed in `v0.14.0`
+
 Deliverables:
 - implement at least one consumer-driven integration besides history indexing;
 - keep the flow bounded and testable.
 
 Recommended candidate:
 - consume `hospital.deleted.v1` or `account.deleted.v1` into a denormalized projection or operational cleanup flow.
+
+Implemented flow:
+- `hospital.deleted.v1 -> timetable-service` cleanup with `timetable.deleted.v1` follow-up publication.
 
 Acceptance:
 - producer and consumer both use shared contracts;

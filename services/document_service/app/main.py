@@ -63,7 +63,10 @@ def create_history_event_subscriber(
     if settings.rabbitmq_url.startswith("memory://") and isinstance(
         publisher, InMemoryHistoryEventPublisher
     ):
-        return publisher
+        return publisher.create_subscriber(
+            queue_name=settings.history_indexer_queue_name,
+            routing_keys=INDEXED_HISTORY_EVENT_TYPES,
+        )
     return RabbitMQHistoryEventSubscriber(
         url=settings.rabbitmq_url,
         exchange_name=settings.history_events_exchange,
