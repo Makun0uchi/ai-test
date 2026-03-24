@@ -1,7 +1,7 @@
 # Simbir.Health Backend: execution backlog
 
 ## Current milestone baseline
-- Baseline version: `v0.13.0`
+- Baseline version: `v0.15.0`
 - Scope already done:
   - microservice CRUD and auth flows;
   - migrations;
@@ -11,7 +11,8 @@
   - contract tests;
   - async search indexing in `document-service`;
   - shared consumer infrastructure;
-  - first real cross-service consumer flow: `hospital.deleted.v1 -> timetable-service` cleanup.
+  - first real cross-service consumer flow: `hospital.deleted.v1 -> timetable-service` cleanup;
+  - full end-to-end patient visit workflow test across all four services.
 
 ## Backlog structure
 - `P0`: required before calling the project production-ready.
@@ -64,6 +65,9 @@ Acceptance:
 - integration test covers the side effect.
 
 ### P0.4 Full end-to-end flow tests
+Status:
+- completed in `v0.15.0`
+
 Deliverables:
 - automated system scenario:
   - create hospital;

@@ -19,6 +19,7 @@ Current implementation progress:
 - `timetable-service`: implemented with schedule CRUD, slot generation, appointment booking, cross-service reference validation, RabbitMQ outbox publication, and hospital deletion cleanup consumption.
 - `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, cross-service reference validation, RabbitMQ outbox publication, and asynchronous search indexing consumer.
 - Shared event contracts, consumer infrastructure, and contract tests are implemented for all published RabbitMQ payloads.
+- A full end-to-end patient visit workflow test now covers all 4 services plus asynchronous search indexing.
 
 ## Services
 

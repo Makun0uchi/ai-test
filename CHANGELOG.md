@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-03-24
+
+### Added
+- Added a full end-to-end workflow test in `tests/test_end_to_end_flow.py` that boots all four FastAPI microservices together, uses real internal HTTP validation, books an appointment, writes history, and verifies searchable output.
+
+### Changed
+- The production execution backlog now marks the P0 end-to-end workflow scenario as completed.
+
 ## [0.14.0] - 2026-03-24
 
 ### Added
