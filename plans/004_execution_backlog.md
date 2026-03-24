@@ -1,7 +1,7 @@
 # Simbir.Health Backend: execution backlog
 
 ## Current milestone baseline
-- Baseline version: `v0.20.0`
+- Baseline version: `v0.21.0`
 - Scope already done:
   - microservice CRUD and auth flows;
   - migrations;
@@ -164,6 +164,9 @@ Implemented outputs:
 - environment matrix in `docs/environment_profiles.md`.
 
 ### P1.5 Operational runbooks
+Status:
+- completed in `v0.22.0`
+
 Tasks:
 - service startup failure;
 - migration rollback;
@@ -171,6 +174,15 @@ Tasks:
 - RabbitMQ failure;
 - Elasticsearch reindex;
 - token/key rotation.
+
+Implemented outputs:
+- `docs/runbooks/README.md`
+- `docs/runbooks/service_startup_failure.md`
+- `docs/runbooks/migration_rollback.md`
+- `docs/runbooks/outbox_lag.md`
+- `docs/runbooks/rabbitmq_reliability.md`
+- `docs/runbooks/search_reindex.md`
+- `docs/runbooks/token_key_rotation.md`
 
 ## P2 backlog
 

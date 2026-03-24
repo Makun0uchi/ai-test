@@ -140,6 +140,11 @@ L- .github/workflows/
 - the current reindex runbook lives in [search_reindex.md](D:/Study/codex/ai-test/docs/runbooks/search_reindex.md);
 - reindex should currently be treated as a maintenance operation during a low-write window.
 
+## Operational runbooks
+
+- the runbook index lives in [docs/runbooks/README.md](D:/Study/codex/ai-test/docs/runbooks/README.md);
+- covered scenarios now include service startup failure, migration rollback, outbox lag, RabbitMQ reliability, search reindex, and token/key rotation.
+
 ## Security posture
 
 - local `docker-compose` now sets JWT and internal tokens explicitly instead of relying on silent defaults;

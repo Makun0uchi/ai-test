@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-03-24
+
+### Added
+- Added an operational runbook index in `docs/runbooks/README.md`.
+- Added runbooks for service startup failure, migration rollback, outbox lag, and token/key rotation.
+
+### Changed
+- The repository documentation now links to the full operational runbook set.
+- The execution backlog now marks operational runbooks as completed.
+
 ## [0.21.0] - 2026-03-24
 
 ### Added
