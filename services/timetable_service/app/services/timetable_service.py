@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timedelta
+from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
 from libs.service_common.reference_validation import ReferenceValidator
@@ -18,6 +18,12 @@ MAX_DURATION = timedelta(hours=12)
 
 
 class TimetableService:
+    TIMETABLE_CREATED_EVENT_TYPE = "timetable.created.v1"
+    TIMETABLE_UPDATED_EVENT_TYPE = "timetable.updated.v1"
+    TIMETABLE_DELETED_EVENT_TYPE = "timetable.deleted.v1"
+    APPOINTMENT_CREATED_EVENT_TYPE = "appointment.created.v1"
+    APPOINTMENT_DELETED_EVENT_TYPE = "appointment.deleted.v1"
+
     def __init__(
         self,
         repository: TimetableRepository,
@@ -46,6 +52,8 @@ class TimetableService:
             starts_at=starts_at,
             ends_at=ends_at,
             room=payload.room,
+            event_type=self.TIMETABLE_CREATED_EVENT_TYPE,
+            routing_key=self.TIMETABLE_CREATED_EVENT_TYPE,
         )
         return self._to_timetable_response(timetable)
 
@@ -72,18 +80,32 @@ class TimetableService:
             starts_at=starts_at,
             ends_at=ends_at,
             room=payload.room,
+            event_type=self.TIMETABLE_UPDATED_EVENT_TYPE,
+            routing_key=self.TIMETABLE_UPDATED_EVENT_TYPE,
         )
         return self._to_timetable_response(updated)
 
     def delete_timetable(self, timetable_id: int) -> None:
         timetable = self._require_timetable(timetable_id)
-        self.repository.delete_timetable(timetable)
+        self.repository.delete_timetable(
+            timetable,
+            event_type=self.TIMETABLE_DELETED_EVENT_TYPE,
+            routing_key=self.TIMETABLE_DELETED_EVENT_TYPE,
+        )
 
     def delete_by_doctor(self, doctor_id: int) -> None:
-        self.repository.delete_by_doctor(doctor_id)
+        self.repository.delete_by_doctor(
+            doctor_id,
+            event_type=self.TIMETABLE_DELETED_EVENT_TYPE,
+            routing_key=self.TIMETABLE_DELETED_EVENT_TYPE,
+        )
 
     def delete_by_hospital(self, hospital_id: int) -> None:
-        self.repository.delete_by_hospital(hospital_id)
+        self.repository.delete_by_hospital(
+            hospital_id,
+            event_type=self.TIMETABLE_DELETED_EVENT_TYPE,
+            routing_key=self.TIMETABLE_DELETED_EVENT_TYPE,
+        )
 
     def list_by_hospital(
         self, hospital_id: int, start: datetime, end: datetime
@@ -141,6 +163,8 @@ class TimetableService:
             timetable_id=timetable_id,
             patient_id=principal.subject,
             time=appointment_time,
+            event_type=self.APPOINTMENT_CREATED_EVENT_TYPE,
+            routing_key=self.APPOINTMENT_CREATED_EVENT_TYPE,
         )
         return self._to_appointment_response(appointment)
 
@@ -158,7 +182,11 @@ class TimetableService:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
             )
-        self.repository.delete_appointment(appointment)
+        self.repository.delete_appointment(
+            appointment,
+            event_type=self.APPOINTMENT_DELETED_EVENT_TYPE,
+            routing_key=self.APPOINTMENT_DELETED_EVENT_TYPE,
+        )
 
     def _require_timetable(self, timetable_id: int) -> Timetable:
         timetable = self.repository.get_timetable(timetable_id)

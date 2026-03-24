@@ -1,3 +1,4 @@
+import time
 from collections.abc import Iterator
 from datetime import datetime
 from typing import Any, cast
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 from libs.service_common.reference_validation import ReferenceValidator
 
 from services.timetable_service.app.core.config import Settings
+from services.timetable_service.app.events.publisher import InMemoryTimetableEventPublisher
 from services.timetable_service.app.main import create_app
 
 
@@ -58,6 +60,8 @@ def client(tmp_path) -> Iterator[TestClient]:
     settings = Settings(
         DATABASE_URL=f"sqlite+pysqlite:///{tmp_path / 'timetable-service.db'}",
         JWT_SECRET_KEY="test-secret-key",
+        RABBITMQ_URL="memory://timetable-events-tests",
+        outbox_poll_interval_seconds=0.01,
     )
 
     with TestClient(
@@ -89,6 +93,28 @@ def _settings(client: TestClient) -> Settings:
 
 def _dt(value: str) -> str:
     return datetime.fromisoformat(value).isoformat()
+
+
+def _event_publisher(client: TestClient) -> InMemoryTimetableEventPublisher:
+    return cast(
+        InMemoryTimetableEventPublisher,
+        cast(Any, client.app).state.timetable_event_publisher,
+    )
+
+
+def _wait_for_published_messages(
+    client: TestClient,
+    *,
+    expected_count: int,
+    timeout_seconds: float = 1.0,
+) -> list[dict[str, Any]]:
+    deadline = time.time() + timeout_seconds
+    publisher = _event_publisher(client)
+    while time.time() < deadline:
+        if len(publisher.published_messages) >= expected_count:
+            return [message.payload for message in publisher.published_messages]
+        time.sleep(0.02)
+    return [message.payload for message in publisher.published_messages]
 
 
 def test_health_endpoint_exposes_service_metadata(client: TestClient) -> None:
@@ -381,3 +407,114 @@ def test_manager_can_delete_by_doctor_and_hospital(client: TestClient) -> None:
     )
     assert hospital_query.status_code == 200
     assert hospital_query.json() == []
+
+
+def test_timetable_and_appointment_events_are_published_via_outbox(client: TestClient) -> None:
+    settings = _settings(client)
+    create_response = client.post(
+        "/api/Timetable",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "hospitalId": 1,
+            "doctorId": 5,
+            "from": _dt("2026-03-24T18:00:00"),
+            "to": _dt("2026-03-24T19:00:00"),
+            "room": "101",
+        },
+    )
+    assert create_response.status_code == 201
+    timetable_id = create_response.json()["id"]
+
+    update_response = client.put(
+        f"/api/Timetable/{timetable_id}",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "hospitalId": 1,
+            "doctorId": 5,
+            "from": _dt("2026-03-24T18:30:00"),
+            "to": _dt("2026-03-24T19:30:00"),
+            "room": "102",
+        },
+    )
+    assert update_response.status_code == 200
+
+    appointment_response = client.post(
+        f"/api/Timetable/{timetable_id}/Appointments",
+        headers=_headers(settings, ["User"], subject=22),
+        json={"time": _dt("2026-03-24T18:30:00")},
+    )
+    assert appointment_response.status_code == 201
+    appointment_id = appointment_response.json()["id"]
+
+    delete_appointment = client.delete(
+        f"/api/Appointment/{appointment_id}",
+        headers=_headers(settings, ["User"], subject=22),
+    )
+    assert delete_appointment.status_code == 204
+
+    delete_timetable = client.delete(
+        f"/api/Timetable/{timetable_id}",
+        headers=_headers(settings, ["Manager"]),
+    )
+    assert delete_timetable.status_code == 204
+
+    payloads = _wait_for_published_messages(client, expected_count=5)
+    assert len(payloads) == 5
+    assert payloads[0]["eventType"] == "timetable.created.v1"
+    assert payloads[0]["timetableId"] == timetable_id
+    assert payloads[1]["eventType"] == "timetable.updated.v1"
+    assert payloads[1]["timetable"]["room"] == "102"
+    assert payloads[2]["eventType"] == "appointment.created.v1"
+    assert payloads[2]["appointment"]["timetableId"] == timetable_id
+    assert payloads[3]["eventType"] == "appointment.deleted.v1"
+    assert payloads[3]["appointmentId"] == appointment_id
+    assert payloads[4]["eventType"] == "timetable.deleted.v1"
+    assert payloads[4]["timetableId"] == timetable_id
+
+
+def test_bulk_timetable_delete_events_are_published(client: TestClient) -> None:
+    settings = _settings(client)
+    first = client.post(
+        "/api/Timetable",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "hospitalId": 3,
+            "doctorId": 7,
+            "from": _dt("2026-03-24T20:00:00"),
+            "to": _dt("2026-03-24T21:00:00"),
+            "room": "301",
+        },
+    )
+    second = client.post(
+        "/api/Timetable",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "hospitalId": 4,
+            "doctorId": 8,
+            "from": _dt("2026-03-24T21:00:00"),
+            "to": _dt("2026-03-24T22:00:00"),
+            "room": "401",
+        },
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+    timetable_id_one = first.json()["id"]
+    timetable_id_two = second.json()["id"]
+
+    delete_doctor = client.delete(
+        "/api/Timetable/Doctor/7", headers=_headers(settings, ["Manager"])
+    )
+    assert delete_doctor.status_code == 204
+
+    delete_hospital = client.delete(
+        "/api/Timetable/Hospital/4", headers=_headers(settings, ["Admin"])
+    )
+    assert delete_hospital.status_code == 204
+
+    payloads = _wait_for_published_messages(client, expected_count=4)
+    assert len(payloads) == 4
+    assert payloads[2]["eventType"] == "timetable.deleted.v1"
+    assert payloads[2]["timetableId"] == timetable_id_one
+    assert payloads[3]["eventType"] == "timetable.deleted.v1"
+    assert payloads[3]["timetableId"] == timetable_id_two

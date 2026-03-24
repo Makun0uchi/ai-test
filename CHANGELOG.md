@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-03-24
+
+### Added
+- Added outbox-based domain event publication to `timetable-service`.
+- Added RabbitMQ publisher and background dispatcher for timetable and appointment events.
+- Added API tests covering event publication for timetable CRUD, appointment booking, and bulk timetable cleanup flows.
+
+### Changed
+- `timetable-service` now writes schedule and appointment mutations together with outbox events in the same transaction.
+
 ## [0.10.0] - 2026-03-24
 
 ### Added

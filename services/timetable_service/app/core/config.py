@@ -23,3 +23,7 @@ class Settings(BaseSettings):
     internal_api_key: str = Field(default="local-internal-api-key", alias="INTERNAL_API_KEY")
     account_service_url: str = Field(default="http://localhost:8081", alias="ACCOUNT_SERVICE_URL")
     hospital_service_url: str = Field(default="http://localhost:8082", alias="HOSPITAL_SERVICE_URL")
+    rabbitmq_url: str = Field(default="memory://timetable-events", alias="RABBITMQ_URL")
+    timetable_events_exchange: str = "simbir.health.events"
+    outbox_poll_interval_seconds: float = 0.1
+    outbox_batch_size: int = 50
