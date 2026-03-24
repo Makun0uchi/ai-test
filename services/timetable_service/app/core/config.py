@@ -1,4 +1,5 @@
-﻿from libs.service_common.versioning import read_version
+from libs.service_common.security import DEFAULT_INTERNAL_API_KEY, DEFAULT_JWT_SECRET_KEY
+from libs.service_common.versioning import read_version
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,9 +19,9 @@ class Settings(BaseSettings):
         default="postgresql+psycopg://postgres:postgres@localhost:5432/timetable_db",
         alias="DATABASE_URL",
     )
-    jwt_secret_key: str = Field(default="local-account-service-secret", alias="JWT_SECRET_KEY")
-    jwt_algorithm: str = "HS256"
-    internal_api_key: str = Field(default="local-internal-api-key", alias="INTERNAL_API_KEY")
+    jwt_secret_key: str = Field(default=DEFAULT_JWT_SECRET_KEY, alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    internal_api_key: str = Field(default=DEFAULT_INTERNAL_API_KEY, alias="INTERNAL_API_KEY")
     account_service_url: str = Field(default="http://localhost:8081", alias="ACCOUNT_SERVICE_URL")
     hospital_service_url: str = Field(default="http://localhost:8082", alias="HOSPITAL_SERVICE_URL")
     rabbitmq_url: str = Field(default="memory://timetable-events", alias="RABBITMQ_URL")

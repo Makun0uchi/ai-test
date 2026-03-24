@@ -7,6 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-03-24
+
+### Added
+- Added shared security configuration validation in `libs/service_common/security.py`.
+- Added `tests/test_security_configuration.py` to cover production security enforcement for JWT and internal API secrets.
+- Added `docs/security/jwt_strategy.md` documenting current HS256 policy, internal token handling, and the asymmetric JWT migration path.
+
+### Changed
+- All four services now load `JWT_ALGORITHM` from environment and validate security settings during application startup.
+- `docker-compose.yml` and `.env.example` now set JWT and internal token values explicitly instead of relying on hidden defaults.
+- The execution backlog now marks security posture uplift as completed.
+
 ## [0.19.0] - 2026-03-24
 
 ### Added

@@ -131,6 +131,13 @@ L- .github/workflows/
 - the current reindex runbook lives in [search_reindex.md](D:/Study/codex/ai-test/docs/runbooks/search_reindex.md);
 - reindex should currently be treated as a maintenance operation during a low-write window.
 
+## Security posture
+
+- local `docker-compose` now sets JWT and internal tokens explicitly instead of relying on silent defaults;
+- `staging` and `production` reject local default `JWT_SECRET_KEY` and `INTERNAL_API_KEY`;
+- `staging` and `production` require both secrets to be at least `32` characters;
+- the current JWT and internal token strategy is documented in [jwt_strategy.md](D:/Study/codex/ai-test/docs/security/jwt_strategy.md).
+
 ## Versioning and releases
 
 - Version source: `VERSION`

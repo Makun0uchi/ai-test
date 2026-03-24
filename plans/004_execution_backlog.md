@@ -1,7 +1,7 @@
 # Simbir.Health Backend: execution backlog
 
 ## Current milestone baseline
-- Baseline version: `v0.18.0`
+- Baseline version: `v0.19.0`
 - Scope already done:
   - microservice CRUD and auth flows;
   - migrations;
@@ -135,11 +135,19 @@ Implemented outputs:
 - `docs/runbooks/search_reindex.md`.
 
 ### P1.3 Security posture uplift
+Status:
+- completed in `v0.20.0`
+
 Tasks:
 - remove production reliance on default JWT secrets;
 - document env requirements;
 - evaluate asymmetric JWT signing;
 - review internal token handling.
+
+Implemented outputs:
+- shared security configuration validation in `libs/service_common/security.py`;
+- explicit JWT env configuration in `docker-compose.yml` and `.env.example`;
+- `docs/security/jwt_strategy.md`.
 
 ### P1.4 Environment profiles
 Tasks:

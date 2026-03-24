@@ -3,6 +3,7 @@ from typing import cast
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from libs.service_common.security import ensure_internal_token
 from sqlalchemy.orm import Session
 
 from ..models.account import Account
@@ -62,8 +63,4 @@ def require_internal_token(
     x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
     settings: Settings = Depends(get_settings),
 ) -> None:
-    if x_internal_token != settings.internal_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid internal token",
-        )
+    ensure_internal_token(x_internal_token, expected_token=settings.internal_api_key)

@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from libs.service_common.logging import CorrelationIdMiddleware, configure_logging
 from libs.service_common.migrations import run_database_migrations
 from libs.service_common.reference_validation import HttpReferenceValidator, ReferenceValidator
+from libs.service_common.security import validate_security_settings
 
 from .core.config import Settings
 from .core.database import DatabaseManager
@@ -97,6 +98,7 @@ def create_app(
     history_event_subscriber: HistoryEventSubscriber | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
+    validate_security_settings(app_settings)
     configure_logging(
         app_settings.service_name,
         logstash_host=app_settings.logstash_host or None,

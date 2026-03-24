@@ -1,4 +1,5 @@
-﻿from libs.service_common.versioning import read_version
+from libs.service_common.security import DEFAULT_INTERNAL_API_KEY, DEFAULT_JWT_SECRET_KEY
+from libs.service_common.versioning import read_version
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,9 +19,9 @@ class Settings(BaseSettings):
         default="postgresql+psycopg://postgres:postgres@localhost:5432/hospital_db",
         alias="DATABASE_URL",
     )
-    jwt_secret_key: str = Field(default="local-account-service-secret", alias="JWT_SECRET_KEY")
-    jwt_algorithm: str = "HS256"
-    internal_api_key: str = Field(default="local-internal-api-key", alias="INTERNAL_API_KEY")
+    jwt_secret_key: str = Field(default=DEFAULT_JWT_SECRET_KEY, alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    internal_api_key: str = Field(default=DEFAULT_INTERNAL_API_KEY, alias="INTERNAL_API_KEY")
     rabbitmq_url: str = Field(default="memory://hospital-events", alias="RABBITMQ_URL")
     logstash_host: str = Field(default="", alias="LOGSTASH_HOST")
     logstash_port: int = Field(default=5000, alias="LOGSTASH_PORT")
