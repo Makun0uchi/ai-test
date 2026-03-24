@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-03-24
+
+### Added
+- Added production-oriented release automation in `.github/workflows/release.yml` with explicit `contents: write` and `packages: write` permissions.
+- Added tagged image publishing to `ghcr.io` for all four microservices during release runs.
+- Added `scripts/extract_release_notes.py` and `tests/test_release_notes.py` so GitHub Releases are generated from the matching `CHANGELOG` section instead of the failing `generate_release_notes` API path.
+
+### Changed
+- Reworked the `release` workflow to stop relying on `generate_release_notes`, which was failing with `403 Resource not accessible by integration`.
+- The execution backlog now marks release automation as completed.
+
 ## [0.16.0] - 2026-03-24
 
 ### Added

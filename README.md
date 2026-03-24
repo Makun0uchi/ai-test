@@ -120,6 +120,10 @@ L- .github/workflows/
 - Changelog format: `Keep a Changelog`
 - Versioning strategy: `Semantic Versioning`
 - Git tags format: `vMAJOR.MINOR.PATCH`
+- Release workflow:
+  - tag push `v*` publishes all 4 images to `ghcr.io/<owner>/<service>:<tag>`
+  - the same workflow creates a GitHub Release from the matching `CHANGELOG` section
+  - workflow requires `contents: write` and `packages: write`
 
 ## Seeded users
 
