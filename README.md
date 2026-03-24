@@ -17,7 +17,7 @@ Current implementation progress:
 - `account-service`: implemented with JWT auth, seeded users, account CRUD, doctor directory, and RabbitMQ outbox publication.
 - `hospital-service`: implemented with hospital CRUD, room management, and RabbitMQ outbox publication.
 - `timetable-service`: implemented with schedule CRUD, slot generation, appointment booking, cross-service reference validation, RabbitMQ outbox publication, and hospital deletion cleanup consumption.
-- `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, cross-service reference validation, RabbitMQ outbox publication, and asynchronous search indexing consumer.
+- `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, alias-based reindex maintenance endpoint, cross-service reference validation, RabbitMQ outbox publication, and asynchronous search indexing consumer.
 - Shared event contracts, consumer infrastructure, and contract tests are implemented for all published RabbitMQ payloads.
 - A full end-to-end patient visit workflow test now covers all 4 services plus asynchronous search indexing.
 
@@ -73,6 +73,7 @@ Structured log fields:
 +- libs/contracts/
 +- libs/service_common/
 +- deploy/
++- docs/
 +- plans/
 +- requirements/
 L- .github/workflows/
@@ -92,7 +93,7 @@ L- .github/workflows/
 
 - Table schema is managed by `Alembic` in each service directory.
 - On startup, every service runs `alembic upgrade head` before serving requests.
-- [deploy/postgres/init/01-create-databases.sql](D:/Study/codex/ai-test/deploy/postgres/init/01-create-databases.sql) only creates PostgreSQL databases; it does not create application tables.
+- [01-create-databases.sql](D:/Study/codex/ai-test/deploy/postgres/init/01-create-databases.sql) only creates PostgreSQL databases; it does not create application tables.
 - Initial revisions live under:
   `services/account_service/migrations/versions/0001_initial.py`
   `services/hospital_service/migrations/versions/0001_initial.py`
@@ -108,6 +109,7 @@ L- .github/workflows/
 - `hospital-service` publishes `hospital.created.v1`, `hospital.updated.v1`, and `hospital.deleted.v1` through RabbitMQ using an outbox table.
 - `document-service` publishes `history.created.v1` and `history.updated.v1` through RabbitMQ using an outbox table.
 - `document-service` consumes its history events from RabbitMQ and updates the Elasticsearch search index asynchronously.
+- `document-service` exposes `POST /api/History/Search/Reindex` for a full PostgreSQL to Elasticsearch rebuild.
 - `timetable-service` consumes `hospital.deleted.v1` from RabbitMQ and cleans up related timetables asynchronously.
 - Shared RabbitMQ payload schemas live in `libs/contracts` and are verified by contract tests.
 - Shared publisher and subscriber primitives live in `libs/service_common.messaging`.
@@ -121,6 +123,13 @@ L- .github/workflows/
 - automatic `requeue=true` is intentionally disabled for handler exceptions;
 - DLQ messages are retained for manual inspection and controlled replay;
 - the current operational runbook lives in [rabbitmq_reliability.md](D:/Study/codex/ai-test/docs/runbooks/rabbitmq_reliability.md).
+
+## Search maintenance policy
+
+- `document-service` uses a logical Elasticsearch alias and versioned physical indices;
+- manual rebuild creates a new physical index and atomically switches the alias;
+- the current reindex runbook lives in [search_reindex.md](D:/Study/codex/ai-test/docs/runbooks/search_reindex.md);
+- reindex should currently be treated as a maintenance operation during a low-write window.
 
 ## Versioning and releases
 

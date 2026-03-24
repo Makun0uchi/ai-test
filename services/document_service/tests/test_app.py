@@ -439,3 +439,64 @@ def test_history_events_are_published_via_outbox(client: TestClient) -> None:
     assert payloads[0]["historyId"] == history_id
     assert payloads[1]["eventType"] == "history.updated.v1"
     assert payloads[1]["historyId"] == history_id
+
+
+def _search_gateway(client: TestClient):
+    return cast(Any, client.app).state.search_gateway
+
+
+def test_admin_can_rebuild_search_projection(client: TestClient) -> None:
+    settings = _settings(client)
+    create_response = client.post(
+        "/api/History",
+        headers=_headers(settings, ["Doctor"], subject=7),
+        json={
+            "date": _dt("2026-03-24T18:00:00"),
+            "pacientId": 11,
+            "hospitalId": 2,
+            "doctorId": 7,
+            "room": "201",
+            "data": "Reindex target document",
+        },
+    )
+    assert create_response.status_code == 201
+
+    search_gateway = _search_gateway(client)
+    search_gateway._documents.clear()
+
+    missing_before_rebuild = client.get(
+        "/api/History/Search",
+        params={"query": "target"},
+        headers=_headers(settings, ["Doctor"], subject=7),
+    )
+    assert missing_before_rebuild.status_code == 200
+    assert missing_before_rebuild.json()["total"] == 0
+
+    rebuild_response = client.post(
+        "/api/History/Search/Reindex",
+        headers=_headers(settings, ["Admin"], subject=1),
+    )
+    assert rebuild_response.status_code == 200
+    payload = rebuild_response.json()
+    assert payload["aliasName"] == settings.search_index_alias
+    assert payload["activeIndexName"] == "in-memory"
+    assert payload["indexedCount"] == 1
+
+    search_after_rebuild = client.get(
+        "/api/History/Search",
+        params={"query": "target"},
+        headers=_headers(settings, ["Doctor"], subject=7),
+    )
+    assert search_after_rebuild.status_code == 200
+    assert search_after_rebuild.json()["total"] == 1
+
+
+def test_user_cannot_trigger_search_reindex(client: TestClient) -> None:
+    settings = _settings(client)
+
+    response = client.post(
+        "/api/History/Search/Reindex",
+        headers=_headers(settings, ["User"], subject=11),
+    )
+
+    assert response.status_code == 403

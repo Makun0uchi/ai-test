@@ -18,9 +18,20 @@ class SearchQuery:
     size: int = 20
 
 
+@dataclass(slots=True)
+class SearchRebuildResult:
+    alias_name: str
+    active_index_name: str
+    indexed_count: int
+    strategy: str
+    previous_indices: list[str]
+
+
 class SearchGateway(Protocol):
-    def setup(self) -> None: ...
+    def setup(self) -> bool: ...
 
     def index_history(self, history: HistoryRecord) -> None: ...
 
     def search(self, query: SearchQuery) -> tuple[int, list[int]]: ...
+
+    def rebuild(self, histories: list[HistoryRecord]) -> SearchRebuildResult: ...

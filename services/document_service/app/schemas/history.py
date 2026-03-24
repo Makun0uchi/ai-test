@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from pydantic import Field
 
@@ -27,3 +27,11 @@ class HistoryResponse(CamelModel):
 class HistorySearchResponse(CamelModel):
     total: int
     items: list[HistoryResponse]
+
+
+class HistorySearchReindexResponse(CamelModel):
+    alias_name: str = Field(serialization_alias="aliasName")
+    active_index_name: str = Field(serialization_alias="activeIndexName")
+    indexed_count: int = Field(serialization_alias="indexedCount")
+    strategy: str
+    previous_indices: list[str] = Field(serialization_alias="previousIndices")

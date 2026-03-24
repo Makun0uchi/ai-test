@@ -12,9 +12,15 @@ from ..core.dependencies import (
 )
 from ..core.security import AuthContext
 from ..repositories.history_repository import HistoryRepository
-from ..schemas.history import HistoryRequest, HistoryResponse, HistorySearchResponse
+from ..schemas.history import (
+    HistoryRequest,
+    HistoryResponse,
+    HistorySearchReindexResponse,
+    HistorySearchResponse,
+)
 from ..search.base import SearchGateway
 from ..services.history_service import HistoryService
+from ..services.search_maintenance_service import SearchMaintenanceService
 
 router = APIRouter(prefix="/api/History", tags=["history"])
 
@@ -25,6 +31,13 @@ def _service(
     reference_validator: ReferenceValidator,
 ) -> HistoryService:
     return HistoryService(HistoryRepository(session), search_gateway, reference_validator)
+
+
+def _search_maintenance_service(
+    session: Session,
+    search_gateway: SearchGateway,
+) -> SearchMaintenanceService:
+    return SearchMaintenanceService(HistoryRepository(session), search_gateway)
 
 
 @router.get("/Search", response_model=HistorySearchResponse)
@@ -55,6 +68,15 @@ def search_history(
         page=page,
         size=size,
     )
+
+
+@router.post("/Search/Reindex", response_model=HistorySearchReindexResponse)
+def rebuild_search_index(
+    principal: AuthContext = Depends(get_current_principal),
+    session: Session = Depends(get_session),
+    search_gateway: SearchGateway = Depends(get_search_gateway),
+) -> HistorySearchReindexResponse:
+    return _search_maintenance_service(session, search_gateway).rebuild_index(principal)
 
 
 @router.get("/Account/{patient_id}", response_model=list[HistoryResponse])

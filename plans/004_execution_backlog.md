@@ -1,7 +1,7 @@
 # Simbir.Health Backend: execution backlog
 
 ## Current milestone baseline
-- Baseline version: `v0.17.0`
+- Baseline version: `v0.18.0`
 - Scope already done:
   - microservice CRUD and auth flows;
   - migrations;
@@ -14,7 +14,8 @@
   - first real cross-service consumer flow: `hospital.deleted.v1 -> timetable-service` cleanup;
   - full end-to-end patient visit workflow test across all four services;
   - correlation IDs and structured event/request logging across HTTP, outbox, and RabbitMQ flows;
-  - release automation for tagged builds, GHCR image publishing, and GitHub Releases from `CHANGELOG`.
+  - release automation for tagged builds, GHCR image publishing, and GitHub Releases from `CHANGELOG`;
+  - RabbitMQ dead-letter strategy and recovery runbook.
 
 ## Backlog structure
 - `P0`: required before calling the project production-ready.
@@ -120,10 +121,18 @@ Tasks:
 - document operational recovery steps.
 
 ### P1.2 Search reindex and maintenance tooling
+Status:
+- completed in `v0.19.0`
+
 Tasks:
 - explicit reindex command or admin workflow;
 - alias management;
 - rebuild docs.
+
+Implemented outputs:
+- `POST /api/History/Search/Reindex` admin workflow;
+- alias-backed Elasticsearch rebuild strategy;
+- `docs/runbooks/search_reindex.md`.
 
 ### P1.3 Security posture uplift
 Tasks:

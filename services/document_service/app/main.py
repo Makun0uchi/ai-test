@@ -21,7 +21,7 @@ from .events.publisher import (
 from .repositories.history_repository import HistoryRepository
 from .routers.history import router as history_router
 from .routers.system import router as system_router
-from .search.base import SearchGateway
+from .search.base import SearchGateway, SearchRebuildResult
 from .search.elasticsearch_gateway import ElasticsearchSearchGateway
 from .search.memory_gateway import InMemorySearchGateway
 from .services.history_service import HistoryService
@@ -35,7 +35,7 @@ INDEXED_HISTORY_EVENT_TYPES = (
 
 def create_search_gateway(settings: Settings) -> SearchGateway:
     if settings.elasticsearch_url.startswith("memory://"):
-        return InMemorySearchGateway()
+        return InMemorySearchGateway(alias_name=settings.search_index_alias)
     return ElasticsearchSearchGateway(settings)
 
 
@@ -78,12 +78,14 @@ def create_history_event_subscriber(
     )
 
 
-def sync_search_index(database_manager: DatabaseManager, search_gateway: SearchGateway) -> None:
+def rebuild_search_index(
+    database_manager: DatabaseManager,
+    search_gateway: SearchGateway,
+) -> SearchRebuildResult:
     session = next(database_manager.get_session())
     try:
         repository = HistoryRepository(session)
-        for history in repository.list_all():
-            search_gateway.index_history(history)
+        return search_gateway.rebuild(repository.list_all())
     finally:
         session.close()
 
@@ -109,7 +111,6 @@ def create_app(
         )
         database_manager = DatabaseManager(app_settings.database_url)
         search_gateway = create_search_gateway(app_settings)
-        search_gateway.setup()
         app_reference_validator = reference_validator or create_reference_validator(app_settings)
         app_history_event_publisher = history_event_publisher or create_history_event_publisher(
             app_settings
@@ -129,7 +130,8 @@ def create_app(
             poll_interval_seconds=app_settings.outbox_poll_interval_seconds,
             batch_size=app_settings.outbox_batch_size,
         )
-        sync_search_index(database_manager, search_gateway)
+        if search_gateway.setup():
+            rebuild_search_index(database_manager, search_gateway)
         indexer_task = asyncio.create_task(history_indexer.run_forever())
         outbox_task = asyncio.create_task(outbox_dispatcher.run_forever())
 

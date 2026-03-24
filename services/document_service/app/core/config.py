@@ -1,4 +1,4 @@
-﻿from libs.service_common.versioning import read_version
+from libs.service_common.versioning import read_version
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -39,4 +39,5 @@ class Settings(BaseSettings):
     outbox_poll_interval_seconds: float = 0.1
     outbox_batch_size: int = 50
     elasticsearch_url: str = Field(default="memory://history", alias="ELASTICSEARCH_URL")
-    search_index_name: str = "history-records-v1"
+    search_index_alias: str = Field(default="history-records", alias="SEARCH_INDEX_ALIAS")
+    search_index_prefix: str = Field(default="history-records-v1", alias="SEARCH_INDEX_PREFIX")

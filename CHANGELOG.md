@@ -7,6 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-03-24
+
+### Added
+- Added `POST /api/History/Search/Reindex` in `document-service` for admin-triggered full search rebuilds from PostgreSQL.
+- Added alias-backed Elasticsearch rebuild support in `services/document_service/app/search/elasticsearch_gateway.py` with versioned physical index names.
+- Added `docs/runbooks/search_reindex.md` and regression coverage for search rebuild behavior, including an Elasticsearch gateway unit test.
+
+### Changed
+- `document-service` search bootstrap now creates or rebuilds the projection through the shared search gateway contract instead of reindexing every startup blindly.
+- Search configuration now distinguishes a logical alias from a physical index prefix.
+- The execution backlog now marks search reindex and maintenance tooling as completed.
+
 ## [0.18.0] - 2026-03-24
 
 ### Added
