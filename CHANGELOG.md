@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-03-24
+
+### Added
+- Added outbox-based domain event publication to `hospital-service`.
+- Added RabbitMQ publisher and background dispatcher for `hospital.created.v1`, `hospital.updated.v1`, and `hospital.deleted.v1`.
+- Added API tests covering hospital event publication and migration coverage for the new outbox table.
+
+### Changed
+- `hospital-service` now writes hospital CRUD changes and outbox events in the same transaction.
+
 ## [0.9.0] - 2026-03-24
 
 ### Added

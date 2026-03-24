@@ -1,4 +1,4 @@
-﻿from fastapi import HTTPException, status
+from fastapi import HTTPException, status
 
 from ..models.hospital import Hospital
 from ..repositories.hospital_repository import HospitalRepository
@@ -6,6 +6,10 @@ from ..schemas.hospital import HospitalRequest, HospitalResponse
 
 
 class HospitalService:
+    CREATED_EVENT_TYPE = "hospital.created.v1"
+    UPDATED_EVENT_TYPE = "hospital.updated.v1"
+    DELETED_EVENT_TYPE = "hospital.deleted.v1"
+
     def __init__(self, repository: HospitalRepository) -> None:
         self.repository = repository
 
@@ -32,6 +36,8 @@ class HospitalService:
             address=payload.address,
             contact_phone=payload.contact_phone,
             rooms=rooms,
+            event_type=self.CREATED_EVENT_TYPE,
+            routing_key=self.CREATED_EVENT_TYPE,
         )
         return self._to_response(hospital)
 
@@ -46,6 +52,8 @@ class HospitalService:
             address=payload.address,
             contact_phone=payload.contact_phone,
             rooms=rooms,
+            event_type=self.UPDATED_EVENT_TYPE,
+            routing_key=self.UPDATED_EVENT_TYPE,
         )
         return self._to_response(updated)
 
@@ -53,7 +61,11 @@ class HospitalService:
         hospital = self.repository.get_hospital(hospital_id)
         if hospital is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hospital not found")
-        self.repository.delete_hospital(hospital)
+        self.repository.delete_hospital(
+            hospital,
+            event_type=self.DELETED_EVENT_TYPE,
+            routing_key=self.DELETED_EVENT_TYPE,
+        )
 
     def _normalize_rooms(self, rooms: list[str]) -> list[str]:
         normalized = [room.strip() for room in rooms if room.strip()]

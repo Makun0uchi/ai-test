@@ -14,7 +14,10 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
             "account_service",
             {"accounts", "roles", "account_roles", "refresh_tokens", "alembic_version"},
         ),
-        ("hospital_service", {"hospitals", "hospital_rooms", "alembic_version"}),
+        (
+            "hospital_service",
+            {"hospitals", "hospital_rooms", "hospital_outbox", "alembic_version"},
+        ),
         ("timetable_service", {"timetables", "appointments", "alembic_version"}),
         (
             "document_service",

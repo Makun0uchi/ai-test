@@ -1,4 +1,5 @@
-﻿from collections.abc import Iterator
+import time
+from collections.abc import Iterator
 from typing import Any, cast
 
 import jwt
@@ -6,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from services.hospital_service.app.core.config import Settings
+from services.hospital_service.app.events.publisher import InMemoryHospitalEventPublisher
 from services.hospital_service.app.main import create_app
 
 
@@ -14,6 +16,8 @@ def client(tmp_path) -> Iterator[TestClient]:
     settings = Settings(
         DATABASE_URL=f"sqlite+pysqlite:///{tmp_path / 'hospital-service.db'}",
         JWT_SECRET_KEY="test-secret-key",
+        RABBITMQ_URL="memory://hospital-events-tests",
+        outbox_poll_interval_seconds=0.01,
     )
 
     with TestClient(create_app(settings)) as test_client:
@@ -43,6 +47,28 @@ def _settings(client: TestClient) -> Settings:
 
 def _internal_headers(settings: Settings) -> dict[str, str]:
     return {"X-Internal-Token": settings.internal_api_key}
+
+
+def _event_publisher(client: TestClient) -> InMemoryHospitalEventPublisher:
+    return cast(
+        InMemoryHospitalEventPublisher,
+        cast(Any, client.app).state.hospital_event_publisher,
+    )
+
+
+def _wait_for_published_messages(
+    client: TestClient,
+    *,
+    expected_count: int,
+    timeout_seconds: float = 1.0,
+) -> list[dict[str, Any]]:
+    deadline = time.time() + timeout_seconds
+    publisher = _event_publisher(client)
+    while time.time() < deadline:
+        if len(publisher.published_messages) >= expected_count:
+            return [message.payload for message in publisher.published_messages]
+        time.sleep(0.02)
+    return [message.payload for message in publisher.published_messages]
 
 
 def test_health_endpoint_exposes_service_metadata(client: TestClient) -> None:
@@ -218,3 +244,48 @@ def test_internal_hospital_reference_exposes_hospital_and_room_lookup(client: Te
         headers=_internal_headers(settings),
     )
     assert missing_room.status_code == 404
+
+
+def test_hospital_events_are_published_via_outbox(client: TestClient) -> None:
+    settings = _settings(client)
+    create_response = client.post(
+        "/api/Hospitals",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "name": "Event Hospital",
+            "address": "Mira 20",
+            "contactPhone": "+7-999-000-00-07",
+            "rooms": ["801", "802"],
+        },
+    )
+    assert create_response.status_code == 201
+    hospital_id = create_response.json()["id"]
+
+    update_response = client.put(
+        f"/api/Hospitals/{hospital_id}",
+        headers=_headers(settings, ["Manager"]),
+        json={
+            "name": "Event Hospital Updated",
+            "address": "Mira 21",
+            "contactPhone": "+7-999-000-00-08",
+            "rooms": ["901"],
+        },
+    )
+    assert update_response.status_code == 200
+
+    delete_response = client.delete(
+        f"/api/Hospitals/{hospital_id}",
+        headers=_headers(settings, ["Manager"]),
+    )
+    assert delete_response.status_code == 204
+
+    payloads = _wait_for_published_messages(client, expected_count=3)
+    assert len(payloads) == 3
+    assert payloads[0]["eventType"] == "hospital.created.v1"
+    assert payloads[0]["hospitalId"] == hospital_id
+    assert payloads[0]["hospital"]["rooms"] == ["801", "802"]
+    assert payloads[1]["eventType"] == "hospital.updated.v1"
+    assert payloads[1]["hospital"]["name"] == "Event Hospital Updated"
+    assert payloads[1]["hospital"]["rooms"] == ["901"]
+    assert payloads[2]["eventType"] == "hospital.deleted.v1"
+    assert payloads[2]["hospitalId"] == hospital_id
