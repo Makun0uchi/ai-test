@@ -75,12 +75,13 @@ def _dt(value: str) -> str:
     return datetime.fromisoformat(value).isoformat()
 
 
-def test_in_memory_subscriber_filters_and_tracks_failures() -> None:
+def test_in_memory_subscriber_routes_failures_to_dead_letter_queue() -> None:
     async def scenario() -> None:
         broker = InMemoryTopicBroker()
         subscriber = broker.create_subscriber(
             queue_name="tests.consumer.v1",
             routing_keys=("hospital.deleted.v1",),
+            dead_letter_queue_name="tests.consumer.dlq.v1",
         )
         stop_event = asyncio.Event()
         processed: list[int] = []
@@ -136,6 +137,8 @@ def test_in_memory_subscriber_filters_and_tracks_failures() -> None:
         assert processed == [2]
         assert len(subscriber.failed_messages) == 1
         assert subscriber.failed_messages[0].event_type == "hospital.deleted.v1"
+        assert len(subscriber.dead_letter_messages) == 1
+        assert subscriber.dead_letter_messages[0].event_type == "hospital.deleted.v1"
 
     asyncio.run(scenario())
 
@@ -166,6 +169,9 @@ def test_hospital_deleted_event_triggers_timetable_cleanup(tmp_path) -> None:
                 hospital_event_subscriber=broker.create_subscriber(
                     queue_name=timetable_settings.hospital_cleanup_queue_name,
                     routing_keys=("hospital.deleted.v1",),
+                    dead_letter_queue_name=(
+                        timetable_settings.hospital_cleanup_dead_letter_queue_name
+                    ),
                 ),
             )
         ) as timetable_client:

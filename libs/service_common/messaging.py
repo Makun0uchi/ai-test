@@ -5,7 +5,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar, cast
 
 import aio_pika
 from pydantic import BaseModel
@@ -44,6 +44,7 @@ class EventPublisher(Protocol):
 
 class EventSubscriber(Protocol):
     failed_messages: list[EventMessage]
+    dead_letter_messages: list[EventMessage]
 
     async def prepare(self) -> None: ...
 
@@ -83,11 +84,13 @@ class InMemoryTopicBroker:
         *,
         queue_name: str,
         routing_keys: tuple[str, ...],
+        dead_letter_queue_name: str | None = None,
     ) -> InMemoryTopicSubscriber:
         return InMemoryTopicSubscriber(
             broker=self,
             queue_name=queue_name,
             routing_keys=routing_keys,
+            dead_letter_queue_name=dead_letter_queue_name,
         )
 
     async def close(self) -> None:
@@ -109,11 +112,14 @@ class InMemoryTopicSubscriber:
         broker: InMemoryTopicBroker,
         queue_name: str,
         routing_keys: tuple[str, ...],
+        dead_letter_queue_name: str | None = None,
     ) -> None:
         self.broker = broker
         self.queue_name = queue_name
         self.routing_keys = routing_keys
+        self.dead_letter_queue_name = dead_letter_queue_name
         self.failed_messages: list[EventMessage] = []
+        self.dead_letter_messages: list[EventMessage] = []
         self._queue: asyncio.Queue[EventMessage] = asyncio.Queue()
         self._prepared = False
 
@@ -140,6 +146,7 @@ class InMemoryTopicSubscriber:
                 await handler(message)
             except Exception:
                 self.failed_messages.append(message)
+                self.dead_letter_messages.append(message)
                 log_event(
                     "event handler failed",
                     correlation_id=message.correlation_id,
@@ -148,6 +155,7 @@ class InMemoryTopicSubscriber:
                     aggregate_type=message.aggregate_type,
                     aggregate_id=message.aggregate_id,
                     queue_name=self.queue_name,
+                    dead_letter_queue_name=self.dead_letter_queue_name,
                 )
                 LOGGER.exception(
                     "In-memory event handler failed",
@@ -158,6 +166,7 @@ class InMemoryTopicSubscriber:
                         "routing_key": message.routing_key,
                         "aggregate_type": message.aggregate_type,
                         "aggregate_id": message.aggregate_id,
+                        "dead_letter_queue_name": self.dead_letter_queue_name,
                     },
                 )
 
@@ -238,12 +247,17 @@ class RabbitMQTopicSubscriber:
         exchange_name: str,
         queue_name: str,
         routing_keys: tuple[str, ...],
+        dead_letter_exchange_name: str | None = None,
+        dead_letter_queue_name: str | None = None,
     ) -> None:
         self.url = url
         self.exchange_name = exchange_name
         self.queue_name = queue_name
         self.routing_keys = routing_keys
+        self.dead_letter_exchange_name = dead_letter_exchange_name
+        self.dead_letter_queue_name = dead_letter_queue_name
         self.failed_messages: list[EventMessage] = []
+        self.dead_letter_messages: list[EventMessage] = []
         self._connection: aio_pika.abc.AbstractRobustConnection | None = None
         self._channel: aio_pika.abc.AbstractChannel | None = None
         self._queue: aio_pika.abc.AbstractQueue | None = None
@@ -280,6 +294,7 @@ class RabbitMQTopicSubscriber:
                 await handler(message)
             except Exception:
                 self.failed_messages.append(message)
+                self.dead_letter_messages.append(message)
                 log_event(
                     "event handler failed",
                     correlation_id=message.correlation_id,
@@ -288,6 +303,7 @@ class RabbitMQTopicSubscriber:
                     aggregate_type=message.aggregate_type,
                     aggregate_id=message.aggregate_id,
                     queue_name=self.queue_name,
+                    dead_letter_queue_name=self.dead_letter_queue_name,
                 )
                 LOGGER.exception(
                     "RabbitMQ event handler failed",
@@ -298,9 +314,10 @@ class RabbitMQTopicSubscriber:
                         "routing_key": message.routing_key,
                         "aggregate_type": message.aggregate_type,
                         "aggregate_id": message.aggregate_id,
+                        "dead_letter_queue_name": self.dead_letter_queue_name,
                     },
                 )
-                await incoming_message.nack(requeue=True)
+                await incoming_message.nack(requeue=False)
                 continue
 
             await incoming_message.ack()
@@ -323,7 +340,33 @@ class RabbitMQTopicSubscriber:
             aio_pika.ExchangeType.TOPIC,
             durable=True,
         )
-        self._queue = await channel.declare_queue(self.queue_name, durable=True)
+        queue_arguments: aio_pika.abc.Arguments = None
+        if self.dead_letter_exchange_name and self.dead_letter_queue_name:
+            dead_letter_exchange = await channel.declare_exchange(
+                self.dead_letter_exchange_name,
+                aio_pika.ExchangeType.DIRECT,
+                durable=True,
+            )
+            dead_letter_queue = await channel.declare_queue(
+                self.dead_letter_queue_name,
+                durable=True,
+            )
+            await dead_letter_queue.bind(
+                dead_letter_exchange,
+                routing_key=self.dead_letter_queue_name,
+            )
+            queue_arguments = cast(
+                aio_pika.abc.Arguments,
+                {
+                    "x-dead-letter-exchange": self.dead_letter_exchange_name,
+                    "x-dead-letter-routing-key": self.dead_letter_queue_name,
+                },
+            )
+        self._queue = await channel.declare_queue(
+            self.queue_name,
+            durable=True,
+            arguments=queue_arguments,
+        )
         for routing_key in self.routing_keys:
             await self._queue.bind(exchange, routing_key=routing_key)
         return self._queue

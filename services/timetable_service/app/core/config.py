@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     logstash_host: str = Field(default="", alias="LOGSTASH_HOST")
     logstash_port: int = Field(default=5000, alias="LOGSTASH_PORT")
     timetable_events_exchange: str = "simbir.health.events"
+    rabbitmq_dead_letter_exchange: str = Field(
+        default="simbir.health.events.dlx",
+        alias="RABBITMQ_DEAD_LETTER_EXCHANGE",
+    )
     hospital_cleanup_queue_name: str = "timetable-service.hospital-cleanup.v1"
+    hospital_cleanup_dead_letter_queue_name: str = Field(
+        default="timetable-service.hospital-cleanup.dlq.v1",
+        alias="HOSPITAL_CLEANUP_DEAD_LETTER_QUEUE_NAME",
+    )
     outbox_poll_interval_seconds: float = 0.1
     outbox_batch_size: int = 50

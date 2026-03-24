@@ -27,7 +27,15 @@ class Settings(BaseSettings):
     logstash_host: str = Field(default="", alias="LOGSTASH_HOST")
     logstash_port: int = Field(default=5000, alias="LOGSTASH_PORT")
     history_events_exchange: str = "simbir.health.events"
+    rabbitmq_dead_letter_exchange: str = Field(
+        default="simbir.health.events.dlx",
+        alias="RABBITMQ_DEAD_LETTER_EXCHANGE",
+    )
     history_indexer_queue_name: str = "document-service.history-indexer.v1"
+    history_indexer_dead_letter_queue_name: str = Field(
+        default="document-service.history-indexer.dlq.v1",
+        alias="HISTORY_INDEXER_DEAD_LETTER_QUEUE_NAME",
+    )
     outbox_poll_interval_seconds: float = 0.1
     outbox_batch_size: int = 50
     elasticsearch_url: str = Field(default="memory://history", alias="ELASTICSEARCH_URL")

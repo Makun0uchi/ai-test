@@ -7,6 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-03-24
+
+### Added
+- Added dead-letter queue support to the shared RabbitMQ and in-memory consumer infrastructure.
+- Added RabbitMQ reliability runbook in `docs/runbooks/rabbitmq_reliability.md`.
+- Added regression coverage for dead-letter routing in `tests/test_event_consumers.py`.
+
+### Changed
+- RabbitMQ consumer failures no longer use endless `requeue=true`; failed events are now routed to dedicated DLQs for controlled replay.
+- `document-service` and `timetable-service` now declare per-consumer dead-letter queue names through settings.
+- The production execution backlog now marks the RabbitMQ reliability policy task as completed.
+
 ## [0.17.0] - 2026-03-24
 
 ### Added

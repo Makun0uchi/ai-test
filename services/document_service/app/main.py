@@ -66,12 +66,15 @@ def create_history_event_subscriber(
         return publisher.create_subscriber(
             queue_name=settings.history_indexer_queue_name,
             routing_keys=INDEXED_HISTORY_EVENT_TYPES,
+            dead_letter_queue_name=settings.history_indexer_dead_letter_queue_name,
         )
     return RabbitMQHistoryEventSubscriber(
         url=settings.rabbitmq_url,
         exchange_name=settings.history_events_exchange,
         queue_name=settings.history_indexer_queue_name,
         routing_keys=INDEXED_HISTORY_EVENT_TYPES,
+        dead_letter_exchange_name=settings.rabbitmq_dead_letter_exchange,
+        dead_letter_queue_name=settings.history_indexer_dead_letter_queue_name,
     )
 
 

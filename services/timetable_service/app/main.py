@@ -51,6 +51,7 @@ def create_hospital_event_subscriber(
         return timetable_event_publisher.create_subscriber(
             queue_name=settings.hospital_cleanup_queue_name,
             routing_keys=("hospital.deleted.v1",),
+            dead_letter_queue_name=settings.hospital_cleanup_dead_letter_queue_name,
         )
     from libs.service_common.messaging import RabbitMQTopicSubscriber
 
@@ -59,6 +60,8 @@ def create_hospital_event_subscriber(
         exchange_name=settings.timetable_events_exchange,
         queue_name=settings.hospital_cleanup_queue_name,
         routing_keys=("hospital.deleted.v1",),
+        dead_letter_exchange_name=settings.rabbitmq_dead_letter_exchange,
+        dead_letter_queue_name=settings.hospital_cleanup_dead_letter_queue_name,
     )
 
 

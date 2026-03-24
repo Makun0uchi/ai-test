@@ -110,6 +110,9 @@ Acceptance:
 ## P1 backlog
 
 ### P1.1 RabbitMQ reliability policy
+Status:
+- completed in `v0.18.0`
+
 Tasks:
 - define retry policy;
 - define dead-letter exchange/queue strategy;

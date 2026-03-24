@@ -111,8 +111,16 @@ L- .github/workflows/
 - `timetable-service` consumes `hospital.deleted.v1` from RabbitMQ and cleans up related timetables asynchronously.
 - Shared RabbitMQ payload schemas live in `libs/contracts` and are verified by contract tests.
 - Shared publisher and subscriber primitives live in `libs/service_common.messaging`.
+- Consumer failure handling uses dedicated dead-letter queues instead of endless hot requeue loops.
 - Every service accepts and returns `X-Correlation-ID`, forwards it through internal HTTP validation, and preserves it in outbox-driven event publication.
 - Internal service-to-service contracts are protected with `X-Internal-Token`.
+
+## RabbitMQ reliability policy
+
+- consumer failures are routed to per-consumer dead-letter queues;
+- automatic `requeue=true` is intentionally disabled for handler exceptions;
+- DLQ messages are retained for manual inspection and controlled replay;
+- the current operational runbook lives in [rabbitmq_reliability.md](D:/Study/codex/ai-test/docs/runbooks/rabbitmq_reliability.md).
 
 ## Versioning and releases
 
