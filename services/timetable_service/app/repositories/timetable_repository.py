@@ -1,6 +1,13 @@
-import json
 from datetime import datetime
 
+from libs.contracts import (
+    AppointmentChangedEvent,
+    AppointmentSnapshot,
+    TimetableAppointmentSnapshot,
+    TimetableChangedEvent,
+    TimetableSnapshot,
+    dump_event_payload,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
@@ -264,37 +271,39 @@ class TimetableRepository:
         return list(self.session.scalars(statement).unique())
 
     def _serialize_timetable_payload(self, timetable: Timetable, event_type: str) -> str:
-        payload = {
-            "eventType": event_type,
-            "timetableId": timetable.id,
-            "timetable": {
-                "id": timetable.id,
-                "hospitalId": timetable.hospital_id,
-                "doctorId": timetable.doctor_id,
-                "from": timetable.starts_at.isoformat(),
-                "to": timetable.ends_at.isoformat(),
-                "room": timetable.room,
-                "appointments": [
-                    {
-                        "id": appointment.id,
-                        "patientId": appointment.patient_id,
-                        "time": appointment.time.isoformat(),
-                    }
+        event = TimetableChangedEvent(
+            eventType=event_type,
+            timetableId=timetable.id,
+            timetable=TimetableSnapshot(
+                id=timetable.id,
+                hospitalId=timetable.hospital_id,
+                doctorId=timetable.doctor_id,
+                **{
+                    "from": timetable.starts_at,
+                    "to": timetable.ends_at,
+                },
+                room=timetable.room,
+                appointments=[
+                    TimetableAppointmentSnapshot(
+                        id=appointment.id,
+                        patientId=appointment.patient_id,
+                        time=appointment.time,
+                    )
                     for appointment in timetable.appointments
                 ],
-            },
-        }
-        return json.dumps(payload, ensure_ascii=False)
+            ),
+        )
+        return dump_event_payload(event)
 
     def _serialize_appointment_payload(self, appointment: Appointment, event_type: str) -> str:
-        payload = {
-            "eventType": event_type,
-            "appointmentId": appointment.id,
-            "appointment": {
-                "id": appointment.id,
-                "timetableId": appointment.timetable_id,
-                "patientId": appointment.patient_id,
-                "time": appointment.time.isoformat(),
-            },
-        }
-        return json.dumps(payload, ensure_ascii=False)
+        event = AppointmentChangedEvent(
+            eventType=event_type,
+            appointmentId=appointment.id,
+            appointment=AppointmentSnapshot(
+                id=appointment.id,
+                timetableId=appointment.timetable_id,
+                patientId=appointment.patient_id,
+                time=appointment.time,
+            ),
+        )
+        return dump_event_payload(event)

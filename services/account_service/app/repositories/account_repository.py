@@ -1,6 +1,6 @@
-import json
 from datetime import datetime
 
+from libs.contracts import AccountChangedEvent, AccountSnapshot, dump_event_payload
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -203,15 +203,15 @@ class AccountRepository:
         self.session.commit()
 
     def _serialize_account_payload(self, account: Account, event_type: str) -> str:
-        payload = {
-            "eventType": event_type,
-            "accountId": account.id,
-            "account": {
-                "id": account.id,
-                "lastName": account.last_name,
-                "firstName": account.first_name,
-                "username": account.username,
-                "roles": sorted(role.name for role in account.roles),
-            },
-        }
-        return json.dumps(payload, ensure_ascii=False)
+        event = AccountChangedEvent(
+            eventType=event_type,
+            accountId=account.id,
+            account=AccountSnapshot(
+                id=account.id,
+                lastName=account.last_name,
+                firstName=account.first_name,
+                username=account.username,
+                roles=sorted(role.name for role in account.roles),
+            ),
+        )
+        return dump_event_payload(event)

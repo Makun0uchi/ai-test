@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
+
+from libs.contracts import HistoryChangedEvent
 
 from ..models.history import HistoryRecord
 from ..search.base import SearchGateway
@@ -29,17 +30,16 @@ class HistorySearchIndexer:
         self._stop_event.set()
 
     async def _handle_message(self, message: HistoryEventMessage) -> None:
-        history_payload = message.payload.get("history")
-        if not isinstance(history_payload, dict):
-            return
+        event = HistoryChangedEvent.model_validate(message.payload)
+        history_payload = event.history
 
         history = HistoryRecord(
-            id=int(history_payload["id"]),
-            date=datetime.fromisoformat(str(history_payload["date"])),
-            patient_id=int(history_payload["patientId"]),
-            hospital_id=int(history_payload["hospitalId"]),
-            doctor_id=int(history_payload["doctorId"]),
-            room=str(history_payload["room"]),
-            data=str(history_payload["data"]),
+            id=history_payload.id,
+            date=history_payload.date,
+            patient_id=history_payload.patient_id,
+            hospital_id=history_payload.hospital_id,
+            doctor_id=history_payload.doctor_id,
+            room=history_payload.room,
+            data=history_payload.data,
         )
         self.search_gateway.index_history(history)

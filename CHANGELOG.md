@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-03-24
+
+### Added
+- Added shared event contracts in `libs/contracts` for account, hospital, timetable, appointment, and history payloads.
+- Added cross-service contract tests validating real published events against shared schemas.
+
+### Changed
+- Event payload serialization in all four services now uses shared typed contracts instead of ad-hoc dictionaries.
+- `document-service` history indexer now parses history events through a typed contract before indexing Elasticsearch documents.
+
 ## [0.12.0] - 2026-03-24
 
 ### Added

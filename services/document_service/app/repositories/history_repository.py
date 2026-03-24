@@ -1,6 +1,6 @@
-import json
 from datetime import datetime
 
+from libs.contracts import HistoryChangedEvent, HistorySnapshot, dump_event_payload
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -93,17 +93,17 @@ class HistoryRepository:
         return history
 
     def _serialize_payload(self, history: HistoryRecord, event_type: str) -> str:
-        payload = {
-            "eventType": event_type,
-            "historyId": history.id,
-            "history": {
-                "id": history.id,
-                "date": history.date.isoformat(),
-                "patientId": history.patient_id,
-                "hospitalId": history.hospital_id,
-                "doctorId": history.doctor_id,
-                "room": history.room,
-                "data": history.data,
-            },
-        }
-        return json.dumps(payload, ensure_ascii=False)
+        event = HistoryChangedEvent(
+            eventType=event_type,
+            historyId=history.id,
+            history=HistorySnapshot(
+                id=history.id,
+                date=history.date,
+                patientId=history.patient_id,
+                hospitalId=history.hospital_id,
+                doctorId=history.doctor_id,
+                room=history.room,
+                data=history.data,
+            ),
+        )
+        return dump_event_payload(event)

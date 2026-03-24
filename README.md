@@ -18,6 +18,7 @@ Current implementation progress:
 - `hospital-service`: implemented with hospital CRUD, room management, and RabbitMQ outbox publication.
 - `timetable-service`: implemented with schedule CRUD, slot generation, appointment booking, cross-service reference validation, and RabbitMQ outbox publication.
 - `document-service`: implemented with medical history CRUD, patient access rules, Elasticsearch-backed search, cross-service reference validation, RabbitMQ outbox publication, and asynchronous search indexing consumer.
+- Shared event contracts and contract tests are implemented for all published RabbitMQ payloads.
 
 ## Services
 
@@ -55,6 +56,7 @@ Current implementation progress:
 |  +- hospital_service/
 |  +- timetable_service/
 |  L- document_service/
++- libs/contracts/
 +- libs/service_common/
 +- deploy/
 +- plans/
@@ -92,6 +94,7 @@ L- .github/workflows/
 - `hospital-service` publishes `hospital.created.v1`, `hospital.updated.v1`, and `hospital.deleted.v1` through RabbitMQ using an outbox table.
 - `document-service` publishes `history.created.v1` and `history.updated.v1` through RabbitMQ using an outbox table.
 - `document-service` consumes its history events from RabbitMQ and updates the Elasticsearch search index asynchronously.
+- Shared RabbitMQ payload schemas live in `libs/contracts` and are verified by contract tests.
 - Internal service-to-service contracts are protected with `X-Internal-Token`.
 
 ## Versioning and releases

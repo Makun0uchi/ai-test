@@ -1,5 +1,4 @@
-import json
-
+from libs.contracts import HospitalChangedEvent, HospitalSnapshot, dump_event_payload
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
@@ -94,15 +93,15 @@ class HospitalRepository:
         self.session.commit()
 
     def _serialize_payload(self, hospital: Hospital, event_type: str) -> str:
-        payload = {
-            "eventType": event_type,
-            "hospitalId": hospital.id,
-            "hospital": {
-                "id": hospital.id,
-                "name": hospital.name,
-                "address": hospital.address,
-                "contactPhone": hospital.contact_phone,
-                "rooms": [room.name for room in hospital.rooms],
-            },
-        }
-        return json.dumps(payload, ensure_ascii=False)
+        event = HospitalChangedEvent(
+            eventType=event_type,
+            hospitalId=hospital.id,
+            hospital=HospitalSnapshot(
+                id=hospital.id,
+                name=hospital.name,
+                address=hospital.address,
+                contactPhone=hospital.contact_phone,
+                rooms=[room.name for room in hospital.rooms],
+            ),
+        )
+        return dump_event_payload(event)
